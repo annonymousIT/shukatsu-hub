@@ -162,7 +162,7 @@ function DateBlock({ app, urgent }: { app: Application; urgent: boolean }) {
     const r = map[app.result];
     const Icon = r.icon;
     return (
-      <div className="flex w-[52px] shrink-0 items-center justify-center rounded-lg border bg-muted">
+      <div className="flex w-14 shrink-0 items-center justify-center rounded-lg border bg-muted">
         <Icon className={cn("h-5 w-5", r.cls)} />
       </div>
     );
@@ -170,7 +170,7 @@ function DateBlock({ app, urgent }: { app: Application; urgent: boolean }) {
 
   if (next.type === "waiting") {
     return (
-      <div className="flex w-[52px] shrink-0 items-center justify-center rounded-lg border bg-muted text-muted-foreground">
+      <div className="flex w-14 shrink-0 items-center justify-center rounded-lg border bg-muted text-muted-foreground">
         <Clock className="h-5 w-5" />
       </div>
     );
@@ -178,7 +178,7 @@ function DateBlock({ app, urgent }: { app: Application; urgent: boolean }) {
 
   if (next.type === "empty") {
     return (
-      <div className="flex w-[52px] shrink-0 items-center justify-center rounded-lg border border-dashed text-muted-foreground">
+      <div className="flex w-14 shrink-0 items-center justify-center rounded-lg border border-dashed text-muted-foreground">
         <ListPlus className="h-4 w-4" />
       </div>
     );
@@ -189,7 +189,7 @@ function DateBlock({ app, urgent }: { app: Application; urgent: boolean }) {
   return (
     <div
       className={cn(
-        "w-[52px] shrink-0 rounded-lg border px-1 py-1.5 text-center",
+        "w-14 shrink-0 rounded-lg border px-1 py-1.5 text-center",
         urgent ? "border-[hsl(var(--danger)/0.3)] bg-[hsl(var(--danger)/0.08)]" : "bg-muted",
       )}
     >
@@ -205,7 +205,7 @@ function DateBlock({ app, urgent }: { app: Application; urgent: boolean }) {
           </div>
           <div
             className={cn(
-              "mt-1 text-[10px] leading-none",
+              "mt-1 whitespace-nowrap text-[10px] leading-none",
               urgent ? "text-danger" : "text-muted-foreground",
             )}
           >
