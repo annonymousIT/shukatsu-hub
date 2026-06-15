@@ -3,14 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Priority, SelectionType } from "@/lib/types";
 import { useStore } from "@/lib/store";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -45,7 +38,7 @@ export function AddApplicationDialog({
       setRole("");
       setPriority("medium");
       setSelectionType("main");
-      setTimeout(() => inputRef.current?.focus(), 50);
+      setTimeout(() => inputRef.current?.focus(), 120);
     }
   }, [open]);
 
@@ -59,15 +52,14 @@ export function AddApplicationDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>企業を追加</DialogTitle>
-          <DialogDescription>
-            まずは企業名だけでもOK。選考ステップは追加後に登録できます。
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={submit} className="space-y-4">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="rounded-t-2xl px-5 pb-7 pt-4">
+        <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border" />
+        <SheetTitle className="text-base">企業を追加</SheetTitle>
+        <p className="mb-4 mt-0.5 text-xs text-muted-foreground">
+          まずは企業名だけでもOK。選考ステップは追加後に登録できます。
+        </p>
+        <form onSubmit={submit} className="space-y-3.5">
           <div className="space-y-1.5">
             <Label htmlFor="add-company">
               企業名 <span className="text-danger">*</span>
@@ -127,16 +119,20 @@ export function AddApplicationDialog({
               </Select>
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+            >
               キャンセル
             </Button>
             <Button type="submit" disabled={!company.trim()}>
               追加して編集
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

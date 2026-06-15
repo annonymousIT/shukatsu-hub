@@ -183,28 +183,43 @@ export function StepTimeline({ app }: { app: Application }) {
                         placeholder="補足名(任意) 例: 一次(オンライン)"
                         className="h-9"
                       />
-                      <div className="flex flex-wrap gap-2">
-                        <Input
-                          type="date"
-                          value={date}
-                          onChange={(e) =>
-                            updateStep(app.id, step.id, {
-                              dueAt: joinDue(e.target.value, time),
-                            })
-                          }
-                          className="h-9 w-[150px]"
-                        />
-                        <Input
-                          type="time"
-                          value={time}
-                          disabled={!date}
-                          onChange={(e) =>
-                            updateStep(app.id, step.id, {
-                              dueAt: joinDue(date, e.target.value),
-                            })
-                          }
-                          className="h-9 w-[104px]"
-                        />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="mb-1 block text-[11px] text-muted-foreground">
+                            締切 / 実施日
+                          </label>
+                          <Input
+                            type="date"
+                            value={date}
+                            onChange={(e) =>
+                              updateStep(app.id, step.id, {
+                                dueAt: joinDue(e.target.value, time),
+                              })
+                            }
+                            className="h-9 w-full"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[11px] text-muted-foreground">
+                            時刻（任意）
+                          </label>
+                          <Input
+                            type="time"
+                            value={time}
+                            disabled={!date}
+                            onChange={(e) =>
+                              updateStep(app.id, step.id, {
+                                dueAt: joinDue(date, e.target.value),
+                              })
+                            }
+                            className="h-9 w-full"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[11px] text-muted-foreground">
+                          状態
+                        </label>
                         <Select
                           value={step.status}
                           onValueChange={(v) =>
@@ -213,7 +228,7 @@ export function StepTimeline({ app }: { app: Application }) {
                             })
                           }
                         >
-                          <SelectTrigger className="h-9 flex-1">
+                          <SelectTrigger className="h-9 w-full">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>

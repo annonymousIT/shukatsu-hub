@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -66,11 +66,22 @@ export function ApplicationDetail({
 }) {
   const { applications } = useStore();
   const app = applications.find((a) => a.id === appId) ?? null;
+  const startX = useRef(0);
+  const startY = useRef(0);
 
   return (
     <Sheet open={!!appId} onOpenChange={(o) => !o && onOpenChange(false)}>
       <SheetContent
         side="right"
+        onTouchStart={(e) => {
+          startX.current = e.touches[0].clientX;
+          startY.current = e.touches[0].clientY;
+        }}
+        onTouchEnd={(e) => {
+          const dx = e.changedTouches[0].clientX - startX.current;
+          const dy = Math.abs(e.changedTouches[0].clientY - startY.current);
+          if (dx > 80 && dx > dy * 1.5) onOpenChange(false);
+        }}
         className="flex w-full flex-col gap-0 overflow-y-auto p-0 scrollbar-thin sm:max-w-md"
       >
         {app ? (
