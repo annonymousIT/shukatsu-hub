@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -66,21 +66,59 @@ export function ApplicationDetail({
 }) {
   const { applications } = useStore();
   const app = applications.find((a) => a.id === appId) ?? null;
-  const startX = useRef(0);
-  const startY = useRef(0);
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const start = useRef<{ x: number; y: number; axis: "" | "x" | "y" }>({
+    x: 0,
+    y: 0,
+    axis: "",
+  });
+  const widthRef = useRef(0);
+
+  useEffect(() => {
+    setDragX(0);
+    setDragging(false);
+  }, [appId]);
 
   return (
     <Sheet open={!!appId} onOpenChange={(o) => !o && onOpenChange(false)}>
       <SheetContent
         side="right"
         onTouchStart={(e) => {
-          startX.current = e.touches[0].clientX;
-          startY.current = e.touches[0].clientY;
+          start.current = {
+            x: e.touches[0].clientX,
+            y: e.touches[0].clientY,
+            axis: "",
+          };
+          widthRef.current = e.currentTarget.getBoundingClientRect().width;
         }}
-        onTouchEnd={(e) => {
-          const dx = e.changedTouches[0].clientX - startX.current;
-          const dy = Math.abs(e.changedTouches[0].clientY - startY.current);
-          if (dx > 80 && dx > dy * 1.5) onOpenChange(false);
+        onTouchMove={(e) => {
+          const dx = e.touches[0].clientX - start.current.x;
+          const dy = e.touches[0].clientY - start.current.y;
+          if (!start.current.axis && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+            start.current.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+          }
+          if (start.current.axis === "x") {
+            if (!dragging) setDragging(true);
+            setDragX(Math.max(0, dx));
+          }
+        }}
+        onTouchEnd={() => {
+          if (start.current.axis === "x") {
+            setDragging(false);
+            const threshold = Math.min(120, widthRef.current * 0.33);
+            if (dragX > threshold) {
+              setDragX(widthRef.current || 420);
+              window.setTimeout(() => onOpenChange(false), 220);
+            } else {
+              setDragX(0);
+            }
+          }
+          start.current.axis = "";
+        }}
+        style={{
+          transform: dragX ? `translateX(${dragX}px)` : undefined,
+          transition: dragging ? "none" : "transform 0.22s ease-out",
         }}
         className="flex w-full flex-col gap-0 overflow-y-auto p-0 scrollbar-thin sm:max-w-md"
       >
@@ -188,14 +226,16 @@ function DetailBody({
 
         {/* セレクト群 */}
         <div className="mt-3 space-y-2">
-          <LabeledSelect
-            label="選考種別"
-            value={app.selectionType}
-            onChange={(v) =>
-              updateApplication(app.id, { selectionType: v as any })
-            }
-            options={SELECTION_TYPE_OPTIONS}
-          />
+          <div data-tour="type">
+            <LabeledSelect
+              label="選考種別"
+              value={app.selectionType}
+              onChange={(v) =>
+                updateApplication(app.id, { selectionType: v as any })
+              }
+              options={SELECTION_TYPE_OPTIONS}
+            />
+          </div>
           {intern && (
             <div className="flex gap-2">
               <div className="w-[44%]">
@@ -270,6 +310,7 @@ function DetailBody({
         <Section
           icon={<Pencil className="h-4 w-4" />}
           title="ES設問・回答"
+          dataTour="es"
           action={
             <Button
               variant="ghost"
@@ -545,14 +586,16 @@ function Section({
   title,
   action,
   children,
+  dataTour,
 }: {
   icon: React.ReactNode;
   title: string;
   action?: React.ReactNode;
   children: React.ReactNode;
+  dataTour?: string;
 }) {
   return (
-    <section className="mt-5">
+    <section className="mt-5" data-tour={dataTour}>
       <div className="mb-2.5 flex items-center justify-between">
         <h3 className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground">
           {icon}

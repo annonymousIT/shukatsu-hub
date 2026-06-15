@@ -86,6 +86,7 @@ function StatusDot({
   return (
     <button
       type="button"
+      data-tour="status-dot"
       onClick={onClick}
       title={`状態: ${STEP_STATUS_LABEL[status]}（タップで切替）`}
       className={cn(
@@ -139,7 +140,7 @@ export function StepTimeline({ app }: { app: Application }) {
                 : "none";
 
             return (
-              <div key={step.id}>
+              <div key={step.id} data-tour={i === 0 ? "step" : undefined}>
                 {i > 0 && <div className="ml-[19px] h-2.5 w-px bg-border" />}
                 <div
                   className={cn(

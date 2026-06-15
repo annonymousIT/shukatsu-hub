@@ -7,6 +7,7 @@ import {
   Bell,
   Check,
   Download,
+  HelpCircle,
   Inbox,
   Loader2,
   LogOut,
@@ -47,6 +48,7 @@ import { ControlsBar } from "@/components/controls-bar";
 import { ApplicationCard } from "@/components/application-card";
 import { ApplicationDetail } from "@/components/application-detail";
 import { AddApplicationDialog } from "@/components/add-application-dialog";
+import { Tutorial, type TourStep } from "@/components/tutorial";
 
 const DEFAULT_FILTERS: Filters = {
   situations: [],
@@ -67,6 +69,7 @@ export function Dashboard() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [showOnboard, setShowOnboard] = useState(false);
+  const [tourIndex, setTourIndex] = useState(-1);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -124,6 +127,91 @@ export function Dashboard() {
     });
     return decorated.map((d) => d.a);
   }, [applications, filters, sort]);
+
+  const tourSteps = useMemo<TourStep[]>(() => {
+    const steps: TourStep[] = [
+      { title: "ようこそ！", body: "操作のコツを1分でガイドするよ。" },
+    ];
+    if (applications.length > 0) {
+      steps.push(
+        {
+          tour: "card",
+          title: "応募先カード",
+          body: "企業ごとにカードで一覧（締切が近い順）。左の日付＝次の締切で、1週間以内は赤で強調。下のバーが進捗（色＝通過／半分＝進行中／灰＝結果待ち）。",
+        },
+        {
+          tour: "banner",
+          title: "直近の予定",
+          body: "一番近い予定をここに固定表示。毎朝ここを見ればOK。",
+        },
+        {
+          tour: "filter",
+          title: "絞り込み",
+          body: "状況（進行中・結果待ちなど）や優先度で絞れる。",
+        },
+        {
+          tour: "add",
+          title: "企業を追加",
+          body: "新しい応募先はここから。",
+        },
+        {
+          tour: "status-dot",
+          openDetail: true,
+          title: "丸＝状態の切替",
+          body: "この丸をタップするたびに 未着手→進行中→結果待ち→完了 と変わる。完了にすると、次のステップが自動で「次にやる」になるよ。",
+        },
+        {
+          tour: "step",
+          openDetail: true,
+          title: "ステップの編集",
+          body: "ステップをタップで編集（締切・場所・メモ）。左の⠿でドラッグ並べ替え。「テンプレから」で定番フローを一括追加もできる。",
+        },
+        {
+          tour: "type",
+          openDetail: true,
+          title: "選考種別",
+          body: "種別で合格時の表示が 内定／内々定／参加確定 に変化。インターンを選ぶと開催地も出る。",
+        },
+        {
+          tour: "es",
+          openDetail: true,
+          title: "ES設問・回答",
+          body: "設問と回答を保存して使い回せる。文字数カウント付き。",
+        },
+      );
+    } else {
+      steps.push({
+        tour: "add",
+        title: "まずは追加",
+        body: "右上の＋から最初の企業を登録してみよう。",
+      });
+    }
+    steps.push({
+      title: "これで準備OK",
+      body: "このガイドはメニュー（⋯）からいつでも見返せる。就活がんばろう！",
+    });
+    return steps;
+  }, [applications.length]);
+
+  useEffect(() => {
+    if (tourIndex < 0) return;
+    const step = tourSteps[tourIndex];
+    if (step?.openDetail) {
+      if (applications[0]) setSelectedId(applications[0].id);
+    } else {
+      setSelectedId(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tourIndex]);
+
+  const startTour = () => setTourIndex(0);
+  const tourNext = () =>
+    setTourIndex((i) => Math.min(i + 1, tourSteps.length - 1));
+  const tourBack = () => setTourIndex((i) => Math.max(i - 1, 0));
+  const tourClose = () => {
+    setTourIndex(-1);
+    setSelectedId(null);
+  };
 
   const handleExport = () => {
     if (applications.length === 0) {
@@ -190,10 +278,16 @@ export function Dashboard() {
             <HeaderMenu
               onImport={() => fileRef.current?.click()}
               onExport={handleExport}
+              onStartTour={startTour}
             />
-            <Button size="sm" className="h-9" onClick={() => setAddOpen(true)}>
+            <Button
+              size="sm"
+              className="h-9"
+              data-tour="add"
+              onClick={() => setAddOpen(true)}
+            >
               <Plus className="h-4 w-4" />
-              <span className="hidden xs:inline sm:inline">追加</span>
+              追加
             </Button>
           </div>
         </div>
@@ -242,8 +336,12 @@ export function Dashboard() {
               </div>
             ) : (
               <div className="mt-3 space-y-2.5">
-                {visible.map((app) => (
-                  <div key={app.id} className="animate-fade-in">
+                {visible.map((app, i) => (
+                  <div
+                    key={app.id}
+                    className="animate-fade-in"
+                    data-tour={i === 0 ? "card" : undefined}
+                  >
                     <ApplicationCard
                       app={app}
                       onOpen={() => setSelectedId(app.id)}
@@ -277,11 +375,21 @@ export function Dashboard() {
       <OnboardingDialog
         open={showOnboard}
         onClose={dismissOnboard}
-        onAdd={() => {
+        onStartTour={() => {
           dismissOnboard();
-          setAddOpen(true);
+          startTour();
         }}
       />
+
+      {tourIndex >= 0 && (
+        <Tutorial
+          steps={tourSteps}
+          index={tourIndex}
+          onNext={tourNext}
+          onBack={tourBack}
+          onClose={tourClose}
+        />
+      )}
     </div>
   );
 }
@@ -313,9 +421,11 @@ function SaveIndicator() {
 function HeaderMenu({
   onImport,
   onExport,
+  onStartTour,
 }: {
   onImport: () => void;
   onExport: () => void;
+  onStartTour: () => void;
 }) {
   const { theme, setTheme } = useStore();
   const { mode, signOut } = useAuth();
@@ -327,6 +437,11 @@ function HeaderMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[13rem]">
+        <DropdownMenuItem onClick={onStartTour}>
+          <HelpCircle className="h-4 w-4" />
+          使い方ガイド
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <div className="flex items-center gap-2 px-2.5 py-1.5 text-[11px] text-muted-foreground">
           <Palette className="h-3.5 w-3.5" />
           テーマ
@@ -405,6 +520,7 @@ function AnnouncementBanner({ applications }: { applications: Application[] }) {
 
   return (
     <div
+      data-tour="banner"
       className={cn(
         "rounded-xl bg-card p-3 shadow-[0_1px_2px_rgba(20,28,55,0.05),0_6px_16px_rgba(20,28,55,0.05)] ring-1",
         urgent ? "ring-[hsl(var(--danger)/0.45)]" : "ring-border",
@@ -472,11 +588,11 @@ function EmptyState({
 function OnboardingDialog({
   open,
   onClose,
-  onAdd,
+  onStartTour,
 }: {
   open: boolean;
   onClose: () => void;
-  onAdd: () => void;
+  onStartTour: () => void;
 }) {
   const steps = [
     {
@@ -517,9 +633,9 @@ function OnboardingDialog({
         </div>
         <DialogDescription className="sr-only">使い方の説明</DialogDescription>
         <div className="mt-5 space-y-2">
-          <Button className="w-full" onClick={onAdd}>
-            <Plus className="h-4 w-4" />
-            最初の企業を追加
+          <Button className="w-full" onClick={onStartTour}>
+            <HelpCircle className="h-4 w-4" />
+            使い方を見る（1分ガイド）
           </Button>
           <button
             type="button"
