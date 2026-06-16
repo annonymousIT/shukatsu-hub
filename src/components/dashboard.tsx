@@ -493,9 +493,9 @@ function SaveIndicator() {
   const { saveState, lastSavedAt } = useStore();
   if (saveState === "saving")
     return (
-      <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
+      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        保存中
+        <span className="hidden sm:inline">保存中</span>
       </span>
     );
   if (saveState === "saved") {
@@ -504,9 +504,9 @@ function SaveIndicator() {
       ? `${t.getHours()}:${String(t.getMinutes()).padStart(2, "0")}`
       : "";
     return (
-      <span className="hidden animate-fade-in items-center gap-1.5 text-xs text-success sm:flex">
+      <span className="flex animate-fade-in items-center gap-1.5 text-xs text-success">
         <Check className="h-3.5 w-3.5" />
-        保存{hhmm && ` ${hhmm}`}
+        <span className="hidden sm:inline">保存{hhmm && ` ${hhmm}`}</span>
       </span>
     );
   }

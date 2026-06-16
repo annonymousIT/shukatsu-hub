@@ -352,7 +352,9 @@ function DetailBody({
             className="mt-3 flex flex-wrap items-center gap-1.5"
           >
             <InfoBadge>{SELECTION_TYPE_LABEL[app.selectionType]}</InfoBadge>
-            <InfoBadge>優先度 {PRIORITY_LABEL[app.priority]}</InfoBadge>
+            <InfoBadge tone={app.priority === "high" ? "accent" : "default"}>
+              優先度 {PRIORITY_LABEL[app.priority]}
+            </InfoBadge>
             <InfoBadge
               tone={
                 app.result === "passed"
@@ -802,14 +804,16 @@ function InfoBadge({
   tone = "default",
 }: {
   children: React.ReactNode;
-  tone?: "default" | "success" | "danger";
+  tone?: "default" | "success" | "danger" | "accent";
 }) {
   const cls =
     tone === "success"
       ? "bg-[hsl(var(--success)/0.14)] text-success ring-[hsl(var(--success)/0.4)]"
       : tone === "danger"
         ? "bg-[hsl(var(--danger)/0.1)] text-danger ring-[hsl(var(--danger)/0.4)]"
-        : "bg-secondary text-foreground ring-[hsl(var(--muted-foreground)/0.32)]";
+        : tone === "accent"
+          ? "bg-accent text-accent-foreground ring-[hsl(var(--accent-foreground)/0.3)]"
+          : "bg-secondary text-foreground ring-[hsl(var(--muted-foreground)/0.32)]";
   return (
     <span
       className={cn(

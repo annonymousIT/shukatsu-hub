@@ -1,6 +1,14 @@
 "use client";
 
-import { Award, Clock, ListPlus, MinusCircle, Pin, XCircle } from "lucide-react";
+import {
+  Award,
+  Clock,
+  ListPlus,
+  MinusCircle,
+  Pin,
+  Star,
+  XCircle,
+} from "lucide-react";
 import type { Application } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -119,8 +127,11 @@ export function ApplicationCard({
       <div className="mt-2 flex items-stretch gap-3">
         <DateBlock app={app} urgent={urgent} />
         <div className="min-w-0 flex-1 self-center">
-          <div className="truncate text-[15px] font-semibold leading-tight">
-            {app.company || "(名称未設定)"}
+          <div className="flex items-center gap-1 text-[15px] font-semibold leading-tight">
+            {app.priority === "high" && (
+              <Star className="h-3.5 w-3.5 shrink-0 fill-primary text-primary" />
+            )}
+            <span className="truncate">{app.company || "(名称未設定)"}</span>
           </div>
           {showRole && app.role && (
             <div className="truncate text-[11px] text-muted-foreground">
@@ -133,7 +144,7 @@ export function ApplicationCard({
 
       {segs.length > 0 && (
         <div className="mt-2.5">
-          {segs.length <= 5 && (
+          {segs.length <= 6 && (
             <div className="mb-1 flex gap-1.5">
               {segs.map((s) => (
                 <div

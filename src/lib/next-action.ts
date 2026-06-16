@@ -61,7 +61,8 @@ export function situationOf(app: Application): Situation {
   if (app.result === "rejected") return "rejected";
   if (app.result === "declined") return "declined";
   const step = getNextActionStep(app);
-  if (!step) return "waiting"; // 全ステップ完了で結果待ち
+  // ステップ未登録(empty)は「進行中」扱い。全ステップ完了の本当の結果待ちだけ waiting。
+  if (!step) return app.steps.length === 0 ? "in_progress" : "waiting";
   if (step.status === "waiting") return "waiting";
   return "in_progress";
 }
