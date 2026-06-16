@@ -61,8 +61,12 @@ export interface SelectionStep {
   kind: StepKind;
   /** 自由記述の補足。例:「一次面接(オンライン)」 */
   name: string;
-  /** 締切 or 実施日。"YYYY-MM-DD" もしくは "YYYY-MM-DDTHH:mm"。未設定は null */
+  /** 締切(申請/予約/提出期限)。"YYYY-MM-DD" もしくは "YYYY-MM-DDTHH:mm"。未設定は null */
   dueAt: string | null;
+  /** 締切を消化したか(提出・予約済み)。true なら注目は実施日へ移る */
+  dueDone?: boolean;
+  /** 実施日(GD実施日・面接日など。締切とは別軸)。未設定は null */
+  heldAt: string | null;
   status: StepStatus;
   /** 場所(住所/会場名 or "オンライン" 等。自由記述) */
   location: string;
@@ -95,11 +99,37 @@ export interface Application {
 /** 配色テーマ */
 export type Theme = "indigo" | "aiNezu" | "sumi" | "navy" | "greige";
 
+/** イベント(説明会/セミナー/OB訪問など)の状態 */
+export type EventStatus = "todo" | "attended"; // 未参加 / 参加済
+
+/** 説明会・イベント(選考フローとは別の単発イベント管理) */
+export interface EventItem {
+  id: string;
+  company: string;
+  /** イベント名(サブタイトル) */
+  title: string;
+  venueMode: VenueMode;
+  venuePlace: string;
+  /** 申込締切。一覧のソート主役。"YYYY-MM-DD" もしくは "YYYY-MM-DDTHH:mm"。未設定は null */
+  applyBy: string | null;
+  /** 申込締切を消化したか(申込済み)。true なら注目は開催日へ移る */
+  applyDone?: boolean;
+  /** 開催日時 */
+  heldAt: string | null;
+  url: string;
+  memo: string;
+  status: EventStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** localStorage 保存形式 兼 エクスポート/インポート形式 */
 export interface BackupFile {
   version: number;
   savedAt: string;
   applications: Application[];
+  /** 旧バックアップには無い(後方互換のため任意) */
+  events?: EventItem[];
 }
 
 // ------- UI 用の補助型 -------
@@ -108,6 +138,16 @@ export type SortKey = "deadline" | "priority" | "name";
 
 /** 並べ替えの昇順／降順 */
 export type SortDir = "asc" | "desc";
+
+/** イベント一覧の並べ替えキー */
+export type EventSortKey = "apply" | "held" | "name";
+
+/** イベント一覧の絞り込み */
+export interface EventFilters {
+  /** 表示する状態(空 = すべて) */
+  statuses: EventStatus[];
+  onlyThisWeek: boolean;
+}
 
 /** 一覧での「状況」分類(フィルタ用・自動算出) */
 export type Situation =

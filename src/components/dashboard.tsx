@@ -57,6 +57,8 @@ import { ApplicationDetail } from "@/components/application-detail";
 import { AddApplicationDialog } from "@/components/add-application-dialog";
 import { Tutorial, type TourStep } from "@/components/tutorial";
 import { LegalDialog } from "@/components/legal-dialog";
+import { EventsView } from "@/components/events-view";
+import { EventDetail } from "@/components/event-detail";
 
 const DEFAULT_FILTERS: Filters = {
   situations: [],
@@ -70,13 +72,21 @@ const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function Dashboard() {
   const store = useStore();
-  const { applications, loaded, replaceAll, seedSampleIfEmpty, deleteApplication } =
-    store;
+  const {
+    applications,
+    loaded,
+    replaceAll,
+    seedSampleIfEmpty,
+    deleteApplication,
+    addEvent,
+  } = store;
   const { user, mode } = useAuth();
   // 同意/オンボード済みフラグはアカウント別に持つ(同一ブラウザで複数アカウントを使っても誤って出ない問題を防ぐ)
   const flagKey = (base: string) =>
     mode === "cloud" && user ? `${base}:${user.id}` : base;
 
+  const [view, setView] = useState<"selection" | "events">("selection");
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>("deadline");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
@@ -290,6 +300,11 @@ export function Dashboard() {
     deleteApplication(SAMPLE_APP_ID);
   };
 
+  const handleAddEvent = () => {
+    const id = addEvent({ company: "", title: "" });
+    setSelectedEventId(id);
+  };
+
   const handleExport = () => {
     if (applications.length === 0) {
       toast.info("エクスポートするデータがありません");
@@ -365,17 +380,36 @@ export function Dashboard() {
               size="sm"
               className="h-9"
               data-tour="add"
-              onClick={() => setAddOpen(true)}
+              onClick={() =>
+                view === "events" ? handleAddEvent() : setAddOpen(true)
+              }
             >
               <Plus className="h-4 w-4" />
               追加
             </Button>
           </div>
         </div>
+        <div className="mx-auto flex max-w-3xl">
+          <TabBtn
+            active={view === "selection"}
+            onClick={() => setView("selection")}
+          >
+            選考
+          </TabBtn>
+          <TabBtn active={view === "events"} onClick={() => setView("events")}>
+            イベント
+          </TabBtn>
+        </div>
       </header>
 
       <main className="mx-auto max-w-3xl px-4 pb-16 pt-4">
-        {applications.length === 0 ? (
+        <div key={view} className="animate-fade-in">
+        {view === "events" ? (
+          <EventsView
+            onOpenEvent={setSelectedEventId}
+            onAddEvent={handleAddEvent}
+          />
+        ) : applications.length === 0 ? (
           <EmptyState
             onAdd={() => setAddOpen(true)}
             onImport={() => fileRef.current?.click()}
@@ -436,6 +470,7 @@ export function Dashboard() {
             )}
           </>
         )}
+        </div>
       </main>
 
       <AddApplicationDialog
@@ -453,6 +488,15 @@ export function Dashboard() {
         onOpenChange={(o) => !o && setSelectedId(null)}
         onDeleted={(name) => {
           setSelectedId(null);
+          toast.success(`「${name}」を削除しました`);
+        }}
+      />
+
+      <EventDetail
+        eventId={selectedEventId}
+        onOpenChange={(o) => !o && setSelectedEventId(null)}
+        onDeleted={(name) => {
+          setSelectedEventId(null);
           toast.success(`「${name}」を削除しました`);
         }}
       />
@@ -486,6 +530,31 @@ export function Dashboard() {
         />
       )}
     </div>
+  );
+}
+
+function TabBtn({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex-1 border-b-2 py-2.5 text-center text-sm font-medium transition-colors",
+        active
+          ? "border-primary text-primary"
+          : "border-transparent text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -592,10 +661,18 @@ function AnnouncementBanner({ applications }: { applications: Application[] }) {
     const up = applications
       .flatMap((app) => {
         const na = getNextAction(app);
-        if (na.type !== "step" || !na.step?.dueAt) return [];
-        const inst = dueInstant(na.step.dueAt);
+        if (na.type !== "step" || !na.focusDate) return [];
+        const inst = dueInstant(na.focusDate);
         if (inst == null) return [];
-        return [{ app, step: na.step, inst, dueAt: na.step.dueAt }];
+        return [
+          {
+            app,
+            step: na.step!,
+            inst,
+            dueAt: na.focusDate,
+            kind: na.focusKind,
+          },
+        ];
       })
       .sort((a, b) => a.inst - b.inst);
     if (up.length === 0) return null;

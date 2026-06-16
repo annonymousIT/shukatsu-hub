@@ -6,10 +6,50 @@ const TERMINAL_KEY = Number.POSITIVE_INFINITY;
 
 export type NextActionType = "step" | "waiting" | "empty" | "result";
 
+export type FocusKind = "deadline" | "held";
+
 export interface NextAction {
   type: NextActionType;
   step: SelectionStep | null;
   sortKey: number;
+  /** 注目日(締切を優先、無ければ実施日)。表示・ハイライトに使う */
+  focusDate: string | null;
+  /** 注目日が締切か実施日か */
+  focusKind: FocusKind | null;
+}
+
+export interface FocusResult {
+  date: string | null;
+  kind: FocusKind | null;
+}
+
+/**
+ * 締切(due)/実施・開催(held)/消化フラグ(done)から「注目日」と種別を算出(選考・イベント共通)。
+ * 締切が未消化かつ未来なら締切が注目。消化済み(提出・予約・申込)or 超過なら実施/開催日へ移る。
+ */
+export function focusOf(
+  due: string | null,
+  held: string | null,
+  done?: boolean,
+): FocusResult {
+  if (due && !done) {
+    const inst = dueInstant(due);
+    if (inst !== null && inst < Date.now() && held) {
+      return { date: held, kind: "held" };
+    }
+    return { date: due, kind: "deadline" };
+  }
+  return { date: held, kind: held ? "held" : null };
+}
+
+/** ステップの注目日(締切優先・消化/超過で実施日へ) */
+export function stepFocusDate(s: SelectionStep): string | null {
+  return focusOf(s.dueAt, s.heldAt, s.dueDone).date;
+}
+
+/** 注目日が締切か実施日か */
+export function stepFocusKind(s: SelectionStep): FocusKind | null {
+  return focusOf(s.dueAt, s.heldAt, s.dueDone).kind;
 }
 
 /** 未完了(完了以外)のステップ一覧 */
@@ -21,10 +61,14 @@ export function incompleteSteps(app: Application): SelectionStep[] {
 export function getNextActionStep(app: Application): SelectionStep | null {
   const incomplete = incompleteSteps(app);
   if (incomplete.length === 0) return null;
-  const withDue = incomplete
-    .filter((s) => s.dueAt)
-    .sort((a, b) => (dueInstant(a.dueAt) ?? 0) - (dueInstant(b.dueAt) ?? 0));
-  if (withDue.length > 0) return withDue[0];
+  const withDate = incomplete
+    .filter((s) => stepFocusDate(s))
+    .sort(
+      (a, b) =>
+        (dueInstant(stepFocusDate(a)) ?? 0) -
+        (dueInstant(stepFocusDate(b)) ?? 0),
+    );
+  if (withDate.length > 0) return withDate[0];
   return incomplete[0];
 }
 
@@ -37,22 +81,47 @@ export function getNextActionStep(app: Application): SelectionStep | null {
  */
 export function getNextAction(app: Application): NextAction {
   if (app.result !== "in_progress") {
-    return { type: "result", step: null, sortKey: TERMINAL_KEY };
+    return {
+      type: "result",
+      step: null,
+      sortKey: TERMINAL_KEY,
+      focusDate: null,
+      focusKind: null,
+    };
   }
   if (app.steps.length === 0) {
-    return { type: "empty", step: null, sortKey: TERMINAL_KEY };
+    return {
+      type: "empty",
+      step: null,
+      sortKey: TERMINAL_KEY,
+      focusDate: null,
+      focusKind: null,
+    };
   }
   const step = getNextActionStep(app);
   if (!step) {
-    return { type: "waiting", step: null, sortKey: TERMINAL_KEY };
+    return {
+      type: "waiting",
+      step: null,
+      sortKey: TERMINAL_KEY,
+      focusDate: null,
+      focusKind: null,
+    };
   }
-  const sortKey = step.dueAt ? (dueInstant(step.dueAt) ?? NO_DUE_KEY) : NO_DUE_KEY;
+  const fd = stepFocusDate(step);
+  const fk = stepFocusKind(step);
+  const sortKey = fd ? (dueInstant(fd) ?? NO_DUE_KEY) : NO_DUE_KEY;
   if (step.status === "waiting") {
     // 結果待ちは締切ソートから除外し、進行中の後ろへ寄せる。
-    // dueAt は保持しているので、状態を戻せば自動で締切順に復帰する。
-    return { type: "waiting", step, sortKey: NO_DUE_KEY };
+    return {
+      type: "waiting",
+      step,
+      sortKey: NO_DUE_KEY,
+      focusDate: fd,
+      focusKind: fk,
+    };
   }
-  return { type: "step", step, sortKey };
+  return { type: "step", step, sortKey, focusDate: fd, focusKind: fk };
 }
 
 /** 状況分類(フィルタ・バッジ用) */

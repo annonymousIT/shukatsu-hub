@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import type {
   Application,
   ESEntry,
+  EventItem,
   Priority,
   RelatedLink,
   ResultStatus,
@@ -22,7 +23,7 @@ import type {
 import { LS_KEY, LS_SEEDED_KEY, LS_THEME_KEY } from "./constants";
 import { newId } from "./utils";
 import { DATA_TABLE, supabase } from "./supabase";
-import { normalizeApps } from "./io";
+import { normalizeApps, normalizeEvents } from "./io";
 import { buildSampleApplications } from "./sample";
 import { useAuth } from "./auth";
 
@@ -49,6 +50,8 @@ type AppPatch = Partial<
     | "memo"
   >
 >;
+
+type EventPatch = Partial<Omit<EventItem, "id" | "createdAt" | "updatedAt">>;
 
 interface StoreValue {
   loaded: boolean;
@@ -89,6 +92,11 @@ interface StoreValue {
   replaceAll: (apps: Application[]) => void;
   /** 新規(空)ユーザーにだけサンプルを投入。投入したら true。既存データは絶対に壊さない。 */
   seedSampleIfEmpty: () => boolean;
+  // ---- 説明会・イベント ----
+  events: EventItem[];
+  addEvent: (input: { company: string; title: string }) => string;
+  updateEvent: (id: string, patch: EventPatch) => void;
+  deleteEvent: (id: string) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -101,19 +109,31 @@ function makeStep(kind: SelectionStep["kind"] = "es"): SelectionStep {
     kind,
     name: "",
     dueAt: null,
+    dueDone: false,
+    heldAt: null,
     status: "not_started",
     location: "",
     memo: "",
   };
 }
 
-function readLocal(key: string): Application[] | null {
+interface LocalData {
+  applications: Application[];
+  events: EventItem[];
+}
+
+function readLocal(key: string): LocalData | null {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
+    // 旧形式: 配列 or {applications} / 新形式: {applications, events}
     const apps = Array.isArray(parsed) ? parsed : parsed?.applications;
-    return Array.isArray(apps) ? normalizeApps(apps) : null;
+    if (!Array.isArray(apps)) return null;
+    return {
+      applications: normalizeApps(apps),
+      events: normalizeEvents(parsed?.events), // 旧データは events 無し → []
+    };
   } catch {
     return null;
   }
@@ -122,6 +142,7 @@ function readLocal(key: string): Application[] | null {
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { mode, user } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
+  const [events, setEvents] = useState<EventItem[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
@@ -164,7 +185,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     (async () => {
       const cached = readLocal(cacheKey);
-      if (cached && !cancelled) setApplications(cached);
+      if (cached && !cancelled) {
+        setApplications(cached.applications);
+        setEvents(cached.events);
+      }
 
       if (mode === "local" || !supabase || !user) {
         if (!cancelled) setLoaded(true);
@@ -180,17 +204,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
         if (error) throw error;
 
-        if (data && Array.isArray(data.data)) {
-          setApplications(normalizeApps(data.data));
+        const remote = data?.data;
+        if (Array.isArray(remote)) {
+          // 旧形式(配列) → applications のみ。events は空で開始
+          setApplications(normalizeApps(remote));
+          setEvents([]);
+        } else if (remote && typeof remote === "object") {
+          setApplications(normalizeApps((remote as any).applications));
+          setEvents(normalizeEvents((remote as any).events));
         } else {
+          // クラウドが空 → ローカルのキャッシュ/レガシーを移行
           const legacy = cached ?? readLocal(LS_KEY);
-          if (legacy && legacy.length > 0) {
-            setApplications(legacy);
-            await supabase
-              .from(DATA_TABLE)
-              .upsert({ user_id: user.id, data: legacy, updated_at: nowISO() });
+          if (legacy && legacy.applications.length > 0) {
+            setApplications(legacy.applications);
+            setEvents(legacy.events);
+            await supabase.from(DATA_TABLE).upsert({
+              user_id: user.id,
+              data: {
+                applications: legacy.applications,
+                events: legacy.events,
+              },
+              updated_at: nowISO(),
+            });
           } else {
             setApplications([]);
+            setEvents([]);
           }
         }
       } catch (e) {
@@ -221,12 +259,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       try {
         localStorage.setItem(
           cacheKey,
-          JSON.stringify({ version: 1, savedAt: nowISO(), applications }),
+          JSON.stringify({
+            version: 1,
+            savedAt: nowISO(),
+            applications,
+            events,
+          }),
         );
         if (mode === "cloud" && supabase && user) {
-          const { error } = await supabase
-            .from(DATA_TABLE)
-            .upsert({ user_id: user.id, data: applications, updated_at: nowISO() });
+          const { error } = await supabase.from(DATA_TABLE).upsert({
+            user_id: user.id,
+            data: { applications, events },
+            updated_at: nowISO(),
+          });
           if (error) throw error;
         }
         dirtyRef.current = false;
@@ -241,7 +286,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }, 600);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [applications, loaded, mode, user?.id]);
+  }, [applications, events, loaded, mode, user?.id]);
 
   // ---- 他端末の更新を取り込む ----
   useEffect(() => {
@@ -254,9 +299,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         .select("data")
         .eq("user_id", user.id)
         .maybeSingle();
-      if (error || !data || !Array.isArray(data.data)) return;
+      if (error || !data) return;
+      const remote = data.data;
       hydratedRef.current = false;
-      setApplications(normalizeApps(data.data));
+      if (Array.isArray(remote)) {
+        setApplications(normalizeApps(remote));
+        setEvents([]);
+      } else if (remote && typeof remote === "object") {
+        setApplications(normalizeApps((remote as any).applications));
+        setEvents(normalizeEvents((remote as any).events));
+      }
     };
     document.addEventListener("visibilitychange", pull);
     window.addEventListener("focus", pull);
@@ -445,6 +497,46 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setApplications(apps);
   }, []);
 
+  const mutateEvent = useCallback(
+    (id: string, fn: (e: EventItem) => EventItem) => {
+      setEvents((prev) =>
+        prev.map((e) => (e.id === id ? { ...fn(e), updatedAt: nowISO() } : e)),
+      );
+    },
+    [],
+  );
+
+  const addEvent = useCallback<StoreValue["addEvent"]>((input) => {
+    const id = newId();
+    const ts = nowISO();
+    const ev: EventItem = {
+      id,
+      company: input.company.trim(),
+      title: input.title.trim(),
+      venueMode: "",
+      venuePlace: "",
+      applyBy: null,
+      applyDone: false,
+      heldAt: null,
+      url: "",
+      memo: "",
+      status: "todo",
+      createdAt: ts,
+      updatedAt: ts,
+    };
+    setEvents((prev) => [ev, ...prev]);
+    return id;
+  }, []);
+
+  const updateEvent = useCallback<StoreValue["updateEvent"]>(
+    (id, patch) => mutateEvent(id, (e) => ({ ...e, ...patch })),
+    [mutateEvent],
+  );
+
+  const deleteEvent = useCallback<StoreValue["deleteEvent"]>((id) => {
+    setEvents((prev) => prev.filter((e) => e.id !== id));
+  }, []);
+
   const seedSampleIfEmpty = useCallback((): boolean => {
     // (1) クラウド取得完了まで投入しない
     if (!loaded) return false;
@@ -501,6 +593,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     deleteEsEntry,
     replaceAll,
     seedSampleIfEmpty,
+    events,
+    addEvent,
+    updateEvent,
+    deleteEvent,
   };
 
   return (

@@ -22,7 +22,7 @@ import {
   STEP_STATUS_LABEL,
   STEP_STATUS_OPTIONS,
 } from "@/lib/constants";
-import { getNextActionStep } from "@/lib/next-action";
+import { getNextActionStep, stepFocusDate } from "@/lib/next-action";
 import {
   joinDue,
   relativeLabel,
@@ -147,9 +147,11 @@ export function StepTimeline({ app }: { app: Application }) {
             const isNext = step.id === nextId;
             const isEditing = editingId === step.id;
             const { date, time } = splitDue(step.dueAt);
+            const { date: hDate, time: hTime } = splitDue(step.heldAt);
+            const focusAt = stepFocusDate(step);
             const u: Urgency =
-              step.status !== "done" && step.dueAt
-                ? urgencyOf(step.dueAt)
+              step.status !== "done" && focusAt
+                ? urgencyOf(focusAt)
                 : "none";
 
             return (
@@ -197,11 +199,11 @@ export function StepTimeline({ app }: { app: Application }) {
                         placeholder="補足名(任意) 例: 一次(オンライン)"
                         className="h-9"
                       />
-                      <div className="space-y-2">
-                        <div>
-                          <label className="mb-1 block text-[11px] text-muted-foreground">
-                            締切 / 実施日
-                          </label>
+                      <div className="space-y-3 rounded-lg border bg-muted/40 p-2.5">
+                        <div className="space-y-1.5">
+                          <div className="text-[11px] font-medium text-muted-foreground">
+                            締切（申請・予約・提出など）
+                          </div>
                           <div className="flex items-center gap-2">
                             <Input
                               type="date"
@@ -227,11 +229,6 @@ export function StepTimeline({ app }: { app: Application }) {
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-[11px] text-muted-foreground">
-                            時刻（任意）
-                          </label>
                           <div className="flex items-center gap-2">
                             <Input
                               type="time"
@@ -254,6 +251,64 @@ export function StepTimeline({ app }: { app: Application }) {
                               onClick={() =>
                                 updateStep(app.id, step.id, {
                                   dueAt: joinDue(date, ""),
+                                })
+                              }
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5 border-t pt-2.5">
+                          <div className="text-[11px] font-medium text-muted-foreground">
+                            実施日（GD・面接など）
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="date"
+                              value={hDate}
+                              onChange={(e) =>
+                                updateStep(app.id, step.id, {
+                                  heldAt: joinDue(e.target.value, hTime),
+                                })
+                              }
+                              className="h-10 min-w-0 flex-1 px-2.5 text-[16px] sm:text-sm"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 shrink-0 text-muted-foreground"
+                              disabled={!hDate}
+                              title="実施日をクリア"
+                              onClick={() =>
+                                updateStep(app.id, step.id, { heldAt: null })
+                              }
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="time"
+                              value={hTime}
+                              disabled={!hDate}
+                              onChange={(e) =>
+                                updateStep(app.id, step.id, {
+                                  heldAt: joinDue(hDate, e.target.value),
+                                })
+                              }
+                              className="h-10 min-w-0 flex-1 px-2.5 text-[16px] sm:text-sm"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 shrink-0 text-muted-foreground"
+                              disabled={!hTime}
+                              title="時刻をクリア"
+                              onClick={() =>
+                                updateStep(app.id, step.id, {
+                                  heldAt: joinDue(hDate, ""),
                                 })
                               }
                             >
@@ -353,25 +408,25 @@ export function StepTimeline({ app }: { app: Application }) {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2.5 p-2.5">
-                      <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground/40" />
-                      <StatusDot
-                        status={step.status}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          cycle(step.id, step.status);
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setEditingId(step.id)}
-                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                      >
-                        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0 flex-1">
+                    <div className="p-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground/40" />
+                        <StatusDot
+                          status={step.status}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            cycle(step.id, step.status);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(step.id)}
+                          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                        >
+                          <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
                           <div
                             className={cn(
-                              "truncate text-sm font-medium",
+                              "min-w-0 flex-1 truncate text-sm font-medium",
                               step.status === "done" &&
                                 "text-muted-foreground line-through",
                             )}
@@ -383,21 +438,7 @@ export function StepTimeline({ app }: { app: Application }) {
                               </span>
                             )}
                           </div>
-                          {(step.dueAt || step.location) && (
-                            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px]">
-                              {step.dueAt && (
-                                <span className={dueTextClass(u)}>
-                                  {relativeLabel(step.dueAt)}
-                                </span>
-                              )}
-                              {step.location && (
-                                <span className="text-muted-foreground">
-                                  {step.location}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                        </button>
                         {isNext ? (
                           <span className="shrink-0 rounded bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
                             次にやる
@@ -407,7 +448,67 @@ export function StepTimeline({ app }: { app: Application }) {
                             {STEP_STATUS_LABEL[step.status]}
                           </span>
                         )}
-                      </button>
+                      </div>
+                      {(step.dueAt || step.heldAt || step.location) && (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2 pl-[52px] text-[11px]">
+                          {step.dueAt && (
+                            <span
+                              className={
+                                step.dueDone
+                                  ? "text-muted-foreground line-through"
+                                  : dueTextClass(u)
+                              }
+                            >
+                              締切{" "}
+                              {step.dueDone ? "提出済み" : relativeLabel(step.dueAt)}
+                            </span>
+                          )}
+                          {step.dueAt && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (step.heldAt) {
+                                  updateStep(app.id, step.id, {
+                                    dueDone: !step.dueDone,
+                                  });
+                                } else {
+                                  updateStep(app.id, step.id, {
+                                    status:
+                                      step.status === "done"
+                                        ? "in_progress"
+                                        : "done",
+                                  });
+                                }
+                              }}
+                              className={cn(
+                                "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium transition-colors",
+                                step.dueDone
+                                  ? "border-[hsl(var(--success)/0.4)] bg-[hsl(var(--success)/0.1)] text-success"
+                                  : "border-input text-muted-foreground hover:bg-muted",
+                              )}
+                            >
+                              {step.dueDone && <Check className="h-3 w-3" />}
+                              {step.dueDone ? "提出済み" : "提出した"}
+                            </button>
+                          )}
+                          {step.heldAt && (
+                            <span
+                              className={
+                                step.dueAt && !step.dueDone
+                                  ? "text-muted-foreground"
+                                  : dueTextClass(u)
+                              }
+                            >
+                              実施 {relativeLabel(step.heldAt)}
+                            </span>
+                          )}
+                          {step.location && (
+                            <span className="text-muted-foreground">
+                              {step.location}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

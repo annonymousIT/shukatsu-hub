@@ -903,7 +903,9 @@ function NextBanner({
   }
 
   const step = next.step!;
-  const u = step.dueAt ? urgencyOf(step.dueAt) : "none";
+  const focus = next.focusDate;
+  const kindLabel = next.focusKind === "held" ? "実施" : "締切";
+  const u = focus ? urgencyOf(focus) : "none";
   const urgent = u === "overdue" || u === "soon" || u === "near";
   return (
     <div
@@ -929,18 +931,23 @@ function NextBanner({
       <div
         className={cn(
           "mt-1 flex items-center gap-1.5 text-sm font-medium",
-          step.dueAt ? (urgent ? "text-danger" : "text-foreground/70") : "text-muted-foreground",
+          focus
+            ? urgent
+              ? "text-danger"
+              : "text-foreground/70"
+            : "text-muted-foreground",
         )}
       >
         <CalendarDays className="h-4 w-4" />
-        {step.dueAt ? (
+        {focus ? (
           <span>
-            {formatDue(step.dueAt)}
+            <span className="text-[11px] opacity-70">{kindLabel}</span>{" "}
+            {formatDue(focus)}
             <span className="mx-1 opacity-40">·</span>
-            <span className="font-bold">{relativeLabel(step.dueAt)}</span>
+            <span className="font-bold">{relativeLabel(focus)}</span>
           </span>
         ) : (
-          <span>締切未設定</span>
+          <span>日程未設定</span>
         )}
       </div>
     </div>

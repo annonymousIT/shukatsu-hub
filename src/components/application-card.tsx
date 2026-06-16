@@ -82,8 +82,8 @@ export function ApplicationCard({
   const pinned = app.links.filter((l) => l.pin && l.url).slice(0, 2);
 
   const u =
-    next.type === "step" && next.step?.dueAt
-      ? urgencyOf(next.step.dueAt)
+    next.type === "step" && next.focusDate
+      ? urgencyOf(next.focusDate)
       : "none";
   const urgent = u === "overdue" || u === "soon" || u === "near";
 
@@ -117,7 +117,9 @@ export function ApplicationCard({
           {sitLabel}
         </span>
         {urgent && (
-          <span className="text-[11px] font-medium text-danger">締切間近</span>
+          <span className="text-[11px] font-medium text-danger">
+            {next.focusKind === "held" ? "実施間近" : "締切間近"}
+          </span>
         )}
         <span className="ml-auto text-[11px] text-muted-foreground">
           {SELECTION_TYPE_LABEL[app.selectionType]}
@@ -225,8 +227,9 @@ function DateBlock({ app, urgent }: { app: Application; urgent: boolean }) {
     );
   }
 
-  const step = next.step!;
-  const d = step.dueAt ? dueToDate(step.dueAt) : null;
+  const focus = next.focusDate;
+  const kindLabel = next.focusKind === "held" ? "実施" : "締切";
+  const d = focus ? dueToDate(focus) : null;
   return (
     <div
       className={cn(
@@ -238,7 +241,15 @@ function DateBlock({ app, urgent }: { app: Application; urgent: boolean }) {
         <>
           <div
             className={cn(
-              "text-[15px] font-semibold leading-none",
+              "text-[9px] font-medium leading-none",
+              urgent ? "text-danger" : "text-muted-foreground",
+            )}
+          >
+            {kindLabel}
+          </div>
+          <div
+            className={cn(
+              "mt-0.5 text-[15px] font-semibold leading-none",
               urgent ? "text-danger" : "text-foreground",
             )}
           >
@@ -254,11 +265,11 @@ function DateBlock({ app, urgent }: { app: Application; urgent: boolean }) {
           </div>
           <div
             className={cn(
-              "mt-1 whitespace-nowrap text-[10px] leading-none",
+              "mt-0.5 whitespace-nowrap text-[10px] leading-none",
               urgent ? "text-danger" : "text-muted-foreground",
             )}
           >
-            {relativeLabel(step.dueAt)}
+            {relativeLabel(focus)}
           </div>
         </>
       ) : (

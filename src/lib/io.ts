@@ -10,6 +10,8 @@ import type {
   StepKind,
   StepStatus,
   VenueMode,
+  EventItem,
+  EventStatus,
 } from "./types";
 import { newId } from "./utils";
 
@@ -57,6 +59,11 @@ function sanitizeStep(raw: any): SelectionStep {
     name: str(raw?.name),
     dueAt:
       typeof raw?.dueAt === "string" && raw.dueAt.length > 0 ? raw.dueAt : null,
+    dueDone: raw?.dueDone === true,
+    heldAt:
+      typeof raw?.heldAt === "string" && raw.heldAt.length > 0
+        ? raw.heldAt
+        : null,
     status: pick<StepStatus>(raw?.status, STEP_STATUSES, "not_started"),
     location: str(raw?.location),
     memo: str(raw?.memo),
@@ -114,6 +121,39 @@ function sanitizeApp(raw: any): Application {
 export function normalizeApps(arr: unknown): Application[] {
   if (!Array.isArray(arr)) return [];
   return arr.map(sanitizeApp);
+}
+
+const EVENT_STATUSES: EventStatus[] = ["todo", "attended"];
+
+function sanitizeEvent(raw: any): EventItem {
+  const ts = new Date().toISOString();
+  return {
+    id: str(raw?.id) || newId(),
+    company: str(raw?.company),
+    title: str(raw?.title),
+    venueMode: pick<VenueMode>(raw?.venueMode, VENUE_MODES, ""),
+    venuePlace: str(raw?.venuePlace),
+    applyBy:
+      typeof raw?.applyBy === "string" && raw.applyBy.length > 0
+        ? raw.applyBy
+        : null,
+    applyDone: raw?.applyDone === true,
+    heldAt:
+      typeof raw?.heldAt === "string" && raw.heldAt.length > 0
+        ? raw.heldAt
+        : null,
+    url: str(raw?.url),
+    memo: str(raw?.memo),
+    status: pick<EventStatus>(raw?.status, EVENT_STATUSES, "todo"),
+    createdAt: str(raw?.createdAt) || ts,
+    updatedAt: str(raw?.updatedAt) || ts,
+  };
+}
+
+/** 任意の配列(旧形式含む)を EventItem[] に正規化(欠損フィールドを補完) */
+export function normalizeEvents(arr: unknown): EventItem[] {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(sanitizeEvent);
 }
 
 /** インポート JSON を Application[] に正規化(不正なら例外) */
