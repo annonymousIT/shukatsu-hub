@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Priority, SelectionType } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -30,7 +30,6 @@ export function AddApplicationDialog({
   const [role, setRole] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
   const [selectionType, setSelectionType] = useState<SelectionType>("main");
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -38,7 +37,6 @@ export function AddApplicationDialog({
       setRole("");
       setPriority("medium");
       setSelectionType("main");
-      setTimeout(() => inputRef.current?.focus(), 120);
     }
   }, [open]);
 
@@ -53,7 +51,11 @@ export function AddApplicationDialog({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-2xl px-5 pb-7 pt-4">
+      <SheetContent
+        side="bottom"
+        className="rounded-t-2xl px-5 pb-7 pt-4"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border" />
         <SheetTitle className="text-base">企業を追加</SheetTitle>
         <p className="mb-4 mt-0.5 text-xs text-muted-foreground">
@@ -66,7 +68,6 @@ export function AddApplicationDialog({
             </Label>
             <Input
               id="add-company"
-              ref={inputRef}
               value={company}
               onChange={(e) => setCompany(e.target.value)}
               placeholder="例: 株式会社サンプル"

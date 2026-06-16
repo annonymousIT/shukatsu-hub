@@ -7,6 +7,7 @@ import {
   Bell,
   Check,
   Download,
+  FileText,
   HelpCircle,
   Inbox,
   Loader2,
@@ -28,7 +29,13 @@ import {
 } from "@/lib/next-action";
 import { dueInstant, dueToDate, relativeLabel, urgencyOf } from "@/lib/date";
 import { exportApplications, parseBackup, readFile } from "@/lib/io";
-import { LS_ONBOARDED_KEY, STEP_KIND_LABEL, THEME_OPTIONS } from "@/lib/constants";
+import {
+  LS_LEGAL_KEY,
+  LS_ONBOARDED_KEY,
+  SAMPLE_APP_ID,
+  STEP_KIND_LABEL,
+  THEME_OPTIONS,
+} from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +56,7 @@ import { ApplicationCard } from "@/components/application-card";
 import { ApplicationDetail } from "@/components/application-detail";
 import { AddApplicationDialog } from "@/components/add-application-dialog";
 import { Tutorial, type TourStep } from "@/components/tutorial";
+import { LegalDialog } from "@/components/legal-dialog";
 
 const DEFAULT_FILTERS: Filters = {
   situations: [],
@@ -62,7 +70,8 @@ const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function Dashboard() {
   const store = useStore();
-  const { applications, loaded, replaceAll } = store;
+  const { applications, loaded, replaceAll, seedSampleIfEmpty, deleteApplication } =
+    store;
 
   const [sort, setSort] = useState<SortKey>("deadline");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -71,21 +80,55 @@ export function Dashboard() {
   const [addOpen, setAddOpen] = useState(false);
   const [showOnboard, setShowOnboard] = useState(false);
   const [tourIndex, setTourIndex] = useState(-1);
+  const [legalOpen, setLegalOpen] = useState(false);
+  const [legalConsentMode, setLegalConsentMode] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!loaded) return;
+    // 新規(空)ユーザーのみサンプル投入。既存データには絶対に触れない(store側で多重ガード)
+    seedSampleIfEmpty();
     try {
-      if (!localStorage.getItem(LS_ONBOARDED_KEY)) setShowOnboard(true);
+      const legalOk = !!localStorage.getItem(LS_LEGAL_KEY);
+      const onboarded = !!localStorage.getItem(LS_ONBOARDED_KEY);
+      // 初回は「規約同意 → オンボード → ツアー」の順
+      if (!legalOk) {
+        setLegalConsentMode(true);
+        setLegalOpen(true);
+      } else if (!onboarded) {
+        setShowOnboard(true);
+      }
     } catch {
       // ignore
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded]);
 
-  const dismissOnboard = () => {
+  const closeOnboard = () => {
     setShowOnboard(false);
     try {
       localStorage.setItem(LS_ONBOARDED_KEY, "1");
+    } catch {
+      // ignore
+    }
+  };
+
+  const dismissOnboard = () => {
+    // 「あとで見る」= ツアーをやらない → サンプルは不要なので削除(存在しなければ無害)
+    closeOnboard();
+    deleteApplication(SAMPLE_APP_ID);
+  };
+
+  const acceptLegal = () => {
+    try {
+      localStorage.setItem(LS_LEGAL_KEY, "1");
+    } catch {
+      // ignore
+    }
+    setLegalOpen(false);
+    setLegalConsentMode(false);
+    try {
+      if (!localStorage.getItem(LS_ONBOARDED_KEY)) setShowOnboard(true);
     } catch {
       // ignore
     }
@@ -220,6 +263,8 @@ export function Dashboard() {
   const tourClose = () => {
     setTourIndex(-1);
     setSelectedId(null);
+    // チュートリアル終了でサンプルを自動削除(存在しなければ無害)
+    deleteApplication(SAMPLE_APP_ID);
   };
 
   const handleExport = () => {
@@ -288,6 +333,10 @@ export function Dashboard() {
               onImport={() => fileRef.current?.click()}
               onExport={handleExport}
               onStartTour={startTour}
+              onOpenLegal={() => {
+                setLegalConsentMode(false);
+                setLegalOpen(true);
+              }}
             />
             <Button
               size="sm"
@@ -388,9 +437,19 @@ export function Dashboard() {
         open={showOnboard}
         onClose={dismissOnboard}
         onStartTour={() => {
-          dismissOnboard();
+          // ツアーはサンプルを使うので、ここでは削除しない(終了時 tourClose で削除)
+          closeOnboard();
           startTour();
         }}
+      />
+
+      <LegalDialog
+        open={legalOpen}
+        onOpenChange={(o) => {
+          if (!legalConsentMode) setLegalOpen(o);
+        }}
+        requireConsent={legalConsentMode}
+        onAgree={acceptLegal}
       />
 
       {tourIndex >= 0 && (
@@ -434,10 +493,12 @@ function HeaderMenu({
   onImport,
   onExport,
   onStartTour,
+  onOpenLegal,
 }: {
   onImport: () => void;
   onExport: () => void;
   onStartTour: () => void;
+  onOpenLegal: () => void;
 }) {
   const { theme, setTheme } = useStore();
   const { mode, signOut } = useAuth();
@@ -452,6 +513,10 @@ function HeaderMenu({
         <DropdownMenuItem onClick={onStartTour}>
           <HelpCircle className="h-4 w-4" />
           使い方ガイド
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onOpenLegal}>
+          <FileText className="h-4 w-4" />
+          プライバシー・利用規約
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <div className="flex items-center gap-2 px-2.5 py-1.5 text-[11px] text-muted-foreground">

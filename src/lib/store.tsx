@@ -19,10 +19,11 @@ import type {
   SelectionType,
   Theme,
 } from "./types";
-import { LS_KEY, LS_THEME_KEY } from "./constants";
+import { LS_KEY, LS_SEEDED_KEY, LS_THEME_KEY } from "./constants";
 import { newId } from "./utils";
 import { DATA_TABLE, supabase } from "./supabase";
 import { normalizeApps } from "./io";
+import { buildSampleApplications } from "./sample";
 import { useAuth } from "./auth";
 
 export type SaveState = "idle" | "saving" | "saved";
@@ -84,6 +85,8 @@ interface StoreValue {
   ) => void;
   deleteEsEntry: (appId: string, entryId: string) => void;
   replaceAll: (apps: Application[]) => void;
+  /** 新規(空)ユーザーにだけサンプルを投入。投入したら true。既存データは絶対に壊さない。 */
+  seedSampleIfEmpty: () => boolean;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -123,6 +126,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("indigo");
   const hydratedRef = useRef(false);
   const dirtyRef = useRef(false);
+  const seedTriedRef = useRef(false);
 
   const cacheKey = mode === "cloud" && user ? `${LS_KEY}:${user.id}` : LS_KEY;
 
@@ -153,6 +157,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     hydratedRef.current = false;
+    seedTriedRef.current = false;
     setLoaded(false);
 
     (async () => {
@@ -429,6 +434,37 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setApplications(apps);
   }, []);
 
+  const seedSampleIfEmpty = useCallback((): boolean => {
+    // (1) クラウド取得完了まで投入しない
+    if (!loaded) return false;
+    // 同一マウントでの二重発火を防ぐ
+    if (seedTriedRef.current) return false;
+    // (2) シード済みフラグ(ユーザー別に分離)があればスキップ=全削除後も再湧きしない
+    const seededKey =
+      mode === "cloud" && user ? `${LS_SEEDED_KEY}:${user.id}` : LS_SEEDED_KEY;
+    let already = false;
+    try {
+      already = !!localStorage.getItem(seededKey);
+    } catch {
+      // ignore
+    }
+    if (already) return false;
+    seedTriedRef.current = true;
+    try {
+      localStorage.setItem(seededKey, "1");
+    } catch {
+      // ignore
+    }
+    // (3) 関数形で prev.length を再判定 → 既存データがあれば絶対に上書きしない最終防御
+    let didSeed = false;
+    setApplications((prev) => {
+      if (prev.length > 0) return prev;
+      didSeed = true;
+      return buildSampleApplications();
+    });
+    return didSeed;
+  }, [loaded, mode, user?.id]);
+
   const value: StoreValue = {
     loaded,
     applications,
@@ -452,6 +488,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     updateEsEntry,
     deleteEsEntry,
     replaceAll,
+    seedSampleIfEmpty,
   };
 
   return (
