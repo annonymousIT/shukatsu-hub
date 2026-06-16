@@ -1,6 +1,6 @@
 "use client";
 
-import { Award, Clock, ListPlus, MinusCircle, XCircle } from "lucide-react";
+import { Award, Clock, ListPlus, MinusCircle, Pin, XCircle } from "lucide-react";
 import type { Application } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -17,6 +17,8 @@ import {
   type SegState,
 } from "@/lib/next-action";
 import { dueToDate, relativeLabel, urgencyOf } from "@/lib/date";
+
+const WD_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function situationBadgeClass(sit: string): string {
   switch (sit) {
@@ -60,13 +62,16 @@ function Seg({ state }: { state: SegState }) {
 export function ApplicationCard({
   app,
   onOpen,
+  showRole = false,
 }: {
   app: Application;
   onOpen: () => void;
+  showRole?: boolean;
 }) {
   const next = getNextAction(app);
   const sit = situationOf(app);
   const segs = trackSegments(app);
+  const pinned = app.links.filter((l) => l.pin && l.url).slice(0, 2);
 
   const u =
     next.type === "step" && next.step?.dueAt
@@ -78,11 +83,18 @@ export function ApplicationCard({
     sit === "passed" ? PASSED_LABEL[app.selectionType] : SITUATION_LABEL[sit];
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
       className={cn(
-        "group block w-full rounded-xl bg-card p-3 text-left shadow-[0_1px_2px_rgba(20,28,55,0.05),0_6px_16px_rgba(20,28,55,0.05)] ring-1 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_2px_4px_rgba(20,28,55,0.06),0_10px_22px_rgba(20,28,55,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:translate-y-0",
+        "group block w-full cursor-pointer rounded-xl bg-card p-3 text-left shadow-[0_1px_2px_rgba(20,28,55,0.05),0_6px_16px_rgba(20,28,55,0.05)] ring-1 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_2px_4px_rgba(20,28,55,0.06),0_10px_22px_rgba(20,28,55,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:translate-y-0",
         urgent ? "ring-[hsl(var(--danger)/0.55)]" : "ring-border",
         sit === "rejected" || sit === "declined" ? "opacity-70" : "",
       )}
@@ -110,7 +122,7 @@ export function ApplicationCard({
           <div className="truncate text-[15px] font-semibold leading-tight">
             {app.company || "(名称未設定)"}
           </div>
-          {app.role && (
+          {showRole && app.role && (
             <div className="truncate text-[11px] text-muted-foreground">
               {app.role}
             </div>
@@ -145,7 +157,25 @@ export function ApplicationCard({
           </div>
         </div>
       )}
-    </button>
+
+      {pinned.length > 0 && (
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          {pinned.map((l) => (
+            <a
+              key={l.id}
+              href={l.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 rounded-md bg-accent px-2 py-1 text-[11px] font-medium text-accent-foreground transition-opacity hover:opacity-80"
+            >
+              <Pin className="h-3 w-3" />
+              <span className="max-w-[8rem] truncate">{l.label || "リンク"}</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -189,7 +219,7 @@ function DateBlock({ app, urgent }: { app: Application; urgent: boolean }) {
   return (
     <div
       className={cn(
-        "w-14 shrink-0 rounded-lg border px-1 py-1.5 text-center",
+        "flex w-14 shrink-0 flex-col items-center justify-center rounded-lg border px-1 py-1.5 text-center",
         urgent ? "border-[hsl(var(--danger)/0.3)] bg-[hsl(var(--danger)/0.08)]" : "bg-muted",
       )}
     >
@@ -202,6 +232,14 @@ function DateBlock({ app, urgent }: { app: Application; urgent: boolean }) {
             )}
           >
             {d.getMonth() + 1}/{d.getDate()}
+          </div>
+          <div
+            className={cn(
+              "mt-0.5 text-[10px] font-medium leading-none",
+              urgent ? "text-danger" : "text-muted-foreground",
+            )}
+          >
+            {WD_EN[d.getDay()]}
           </div>
           <div
             className={cn(
@@ -230,10 +268,7 @@ function NextLine({
     return (
       <div className="mt-1 truncate text-[12.5px]">
         <span className="text-muted-foreground">次: </span>
-        <span className="font-medium">
-          {STEP_KIND_LABEL[next.step!.kind]}
-          {next.step!.name ? ` ${next.step!.name}` : ""}
-        </span>
+        <span className="font-medium">{STEP_KIND_LABEL[next.step!.kind]}</span>
       </div>
     );
   }

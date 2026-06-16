@@ -48,7 +48,9 @@ export function getNextAction(app: Application): NextAction {
   }
   const sortKey = step.dueAt ? (dueInstant(step.dueAt) ?? NO_DUE_KEY) : NO_DUE_KEY;
   if (step.status === "waiting") {
-    return { type: "waiting", step, sortKey };
+    // 結果待ちは締切ソートから除外し、進行中の後ろへ寄せる。
+    // dueAt は保持しているので、状態を戻せば自動で締切順に復帰する。
+    return { type: "waiting", step, sortKey: NO_DUE_KEY };
   }
   return { type: "step", step, sortKey };
 }

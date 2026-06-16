@@ -17,6 +17,7 @@ import {
   MapPin,
   MinusCircle,
   Pencil,
+  Pin,
   Plus,
   StickyNote,
   Target,
@@ -173,6 +174,7 @@ function DetailBody({
   const [openEs, setOpenEs] = useState<string | null>(null);
   const next = getNextAction(app);
   const intern = isInternType(app.selectionType);
+  const pinnedCount = app.links.filter((l) => l.pin).length;
 
   return (
     <>
@@ -486,6 +488,26 @@ function DetailBody({
                     placeholder="https://..."
                     className="h-9 flex-1 text-sm"
                   />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "h-9 w-9 shrink-0",
+                      link.pin ? "text-primary" : "text-muted-foreground",
+                    )}
+                    disabled={!link.pin && pinnedCount >= 2}
+                    title={
+                      link.pin
+                        ? "ピン留め中（カードに表示）"
+                        : pinnedCount >= 2
+                          ? "ピンは最大2つまで"
+                          : "カードにピン留め"
+                    }
+                    onClick={() => updateLink(app.id, link.id, { pin: !link.pin })}
+                  >
+                    <Pin className="h-4 w-4" />
+                  </Button>
                   <Button
                     asChild
                     variant="ghost"

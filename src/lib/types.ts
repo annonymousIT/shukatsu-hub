@@ -42,6 +42,8 @@ export interface RelatedLink {
   id: string;
   label: string;
   url: string;
+  /** 一覧カードにピン留め表示するか(最大2件) */
+  pin?: boolean;
 }
 
 /** ES(エントリーシート)の設問と回答。企業ごとに保存して使い回せる */

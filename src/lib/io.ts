@@ -68,6 +68,7 @@ function sanitizeLink(raw: any): RelatedLink {
     id: str(raw?.id) || newId(),
     label: str(raw?.label),
     url: str(raw?.url),
+    pin: raw?.pin === true,
   };
 }
 

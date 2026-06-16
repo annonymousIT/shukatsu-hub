@@ -155,6 +155,18 @@ export function Dashboard() {
     [applications],
   );
 
+  // 同名企業が2件以上あるときだけ、カードに職種(role)を出して見分けやすくする
+  const dupCompanies = useMemo(() => {
+    const count = new Map<string, number>();
+    for (const a of applications) {
+      const c = a.company.trim();
+      if (c) count.set(c, (count.get(c) ?? 0) + 1);
+    }
+    return new Set(
+      [...count.entries()].filter(([, n]) => n >= 2).map(([c]) => c),
+    );
+  }, [applications]);
+
   const visible = useMemo(() => {
     let list = applications.filter((a) => {
       if (
@@ -415,6 +427,7 @@ export function Dashboard() {
                   >
                     <ApplicationCard
                       app={app}
+                      showRole={dupCompanies.has(app.company.trim())}
                       onOpen={() => setSelectedId(app.id)}
                     />
                   </div>
