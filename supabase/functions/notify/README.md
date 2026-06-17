@@ -33,17 +33,20 @@ curl -X POST "https://<project-ref>.supabase.co/functions/v1/notify" \
 # => {"today":"2026-06-18","users":N,"sent":M,"failed":0}
 ```
 
-## 4. 毎朝のスケジュール (pg_cron + pg_net)
+## 4. スケジュール (pg_cron + pg_net)
 
-SQL エディタで拡張を有効化してから登録する。**JST 8:00 = UTC 23:00**。
+通知時刻はユーザーが個別に設定する(6〜23時)ので、cron は**毎時0分**に回し、
+関数内で「各ユーザーの設定時刻(JST)に一致した回だけ送る」。
+
+SQL エディタで拡張を有効化してから登録する。
 
 ```sql
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
 select cron.schedule(
-  'shukatsu-notify-morning',
-  '0 23 * * *',  -- 毎日 UTC23:00 (= JST 翌 8:00)
+  'shukatsu-notify-hourly',
+  '0 * * * *',  -- 毎時0分(UTC)。関数が各ユーザーの設定時刻(JST)を見て出し分ける
   $$
   select net.http_post(
     url := 'https://<project-ref>.supabase.co/functions/v1/notify',
@@ -60,7 +63,7 @@ select cron.schedule(
 解除するとき:
 
 ```sql
-select cron.unschedule('shukatsu-notify-morning');
+select cron.unschedule('shukatsu-notify-hourly');
 ```
 
 ## 配信ロジック（index.ts と対応）

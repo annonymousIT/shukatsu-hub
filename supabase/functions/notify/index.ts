@@ -41,6 +41,11 @@ function jstToday(): string {
   return new Date(now.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 }
 
+function jstHour(): number {
+  const now = new Date();
+  return new Date(now.getTime() + 9 * 3600 * 1000).getUTCHours();
+}
+
 function addDays(ymd: string, n: number): string {
   const d = new Date(ymd + "T00:00:00Z");
   d.setUTCDate(d.getUTCDate() + n);
@@ -160,6 +165,7 @@ Deno.serve(async (req) => {
   }
 
   const today = jstToday();
+  const hour = jstHour();
   const { data: rows, error } = await supabase
     .from("user_data")
     .select("user_id, data");
@@ -178,6 +184,9 @@ Deno.serve(async (req) => {
     const d = (row as any).data ?? {};
     const notify = d.notify;
     if (!notify?.enabled) continue;
+    // ユーザーが設定した時刻(JST)の回だけ送る
+    const userHour = typeof notify.hour === "number" ? notify.hour : 8;
+    if (userHour !== hour) continue;
     const subs: any[] = d.pushSubscriptions ?? [];
     if (!subs.length) continue;
 

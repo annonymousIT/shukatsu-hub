@@ -16,6 +16,7 @@ import {
   Trash2,
   Type,
   Upload,
+  UserCircle,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -29,7 +30,16 @@ import {
 } from "@/lib/push";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+
+const NOTIFY_HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 6:00〜23:00
 
 export function SettingsSheet({
   open,
@@ -221,6 +231,37 @@ function SettingsBody({
       </div>
 
       <div className="space-y-6 px-4 py-5">
+        {mode === "cloud" && user?.email && (
+          <Section icon={<UserCircle className="h-4 w-4" />} title="アカウント">
+            <div className="rounded-xl border p-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-[15px] font-medium text-accent-foreground">
+                  {user.email[0]?.toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium">
+                    {user.email}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    ログイン中・クラウド同期
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  await signOut();
+                  toast.success("ログアウトしました");
+                }}
+                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border py-2 text-sm font-medium text-danger hover:bg-[hsl(var(--danger)/0.06)]"
+              >
+                <LogOut className="h-4 w-4" />
+                ログアウト
+              </button>
+            </div>
+          </Section>
+        )}
+
         {/* 通知 */}
         <Section icon={<Bell className="h-4 w-4" />} title="通知">
           <div className="space-y-3 rounded-xl border p-3">
@@ -291,7 +332,21 @@ function SettingsBody({
                 <div className="flex items-center border-t pt-2.5 text-sm">
                   <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
                   通知する時刻
-                  <span className="ml-auto text-muted-foreground">朝 8:00</span>
+                  <Select
+                    value={String(notify.hour)}
+                    onValueChange={(v) => setNotify({ hour: Number(v) })}
+                  >
+                    <SelectTrigger className="ml-auto h-8 w-[92px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {NOTIFY_HOURS.map((h) => (
+                        <SelectItem key={h} value={String(h)}>
+                          {h}:00
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             )}
@@ -417,22 +472,7 @@ function SettingsBody({
               label="プライバシー・利用規約"
               onClick={onOpenLegal}
             />
-            {mode === "cloud" && (
-              <Row
-                icon={<LogOut className="h-4 w-4" />}
-                label="ログアウト"
-                onClick={async () => {
-                  await signOut();
-                  toast.success("ログアウトしました");
-                }}
-              />
-            )}
           </div>
-          {mode === "cloud" && user?.email && (
-            <p className="mt-3 text-center text-[11px] text-muted-foreground">
-              {user.email} でログイン中
-            </p>
-          )}
         </Section>
       </div>
     </>
