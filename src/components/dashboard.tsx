@@ -452,7 +452,12 @@ export function Dashboard() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto overscroll-contain">
+      <main
+        className={cn(
+          "flex-1 overscroll-contain bg-background",
+          dragging ? "overflow-hidden" : "overflow-y-auto",
+        )}
+      >
         <div className="mx-auto max-w-3xl pb-16 pt-4">
           <div className="px-4">
             <OnboardingPrompts

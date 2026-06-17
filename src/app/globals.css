@@ -277,7 +277,7 @@
   }
   body {
     @apply text-foreground;
-    background-color: hsl(var(--background));
+    background-color: hsl(var(--card));
     font-family: var(
       --app-font,
       ui-sans-serif,
