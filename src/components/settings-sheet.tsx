@@ -11,6 +11,7 @@ import {
   FileText,
   HelpCircle,
   LogOut,
+  MessageSquare,
   Palette,
   Smartphone,
   Trash2,
@@ -28,8 +29,10 @@ import {
   isStandalone,
   pushSupported,
 } from "@/lib/push";
+import { submitFeedback } from "@/lib/feedback";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -456,6 +459,15 @@ function SettingsBody({
           </div>
         </Section>
 
+        {mode === "cloud" && user && (
+          <Section
+            icon={<MessageSquare className="h-4 w-4" />}
+            title="フィードバック"
+          >
+            <FeedbackForm userId={user.id} />
+          </Section>
+        )}
+
         {/* その他 */}
         <Section icon={<HelpCircle className="h-4 w-4" />} title="その他">
           <div className="overflow-hidden rounded-xl border">
@@ -525,6 +537,65 @@ function Row({
       <span className="flex-1">{label}</span>
       <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
     </button>
+  );
+}
+
+function FeedbackForm({ userId }: { userId: string }) {
+  const KINDS = ["要望", "不具合", "UIの使い心地", "その他"];
+  const [kind, setKind] = useState("要望");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const submit = async () => {
+    if (!message.trim()) {
+      toast.info("内容を入力してね");
+      return;
+    }
+    setSending(true);
+    const ok = await submitFeedback(userId, kind, message);
+    setSending(false);
+    if (ok) {
+      toast.success("送ってくれてありがとう🙏");
+      setMessage("");
+    } else {
+      toast.error("送信に失敗しました");
+    }
+  };
+
+  return (
+    <div className="space-y-2.5 rounded-xl border p-3">
+      <div className="flex flex-wrap gap-1.5">
+        {KINDS.map((k) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setKind(k)}
+            className={cn(
+              "rounded-lg border px-2.5 py-1 text-[12px] transition-colors",
+              kind === k
+                ? "border-primary bg-accent text-accent-foreground"
+                : "border-border text-muted-foreground",
+            )}
+          >
+            {k}
+          </button>
+        ))}
+      </div>
+      <Textarea
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        placeholder="要望・感想・不具合など、なんでも教えて"
+        className="min-h-[72px] resize-y"
+      />
+      <Button
+        type="button"
+        onClick={submit}
+        disabled={sending}
+        className="w-full"
+      >
+        送信する
+      </Button>
+    </div>
   );
 }
 
