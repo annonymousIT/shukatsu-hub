@@ -51,6 +51,7 @@ import { EventsView } from "@/components/events-view";
 import { EventDetail } from "@/components/event-detail";
 import { SettingsSheet } from "@/components/settings-sheet";
 import { FeedbackPrompt } from "@/components/feedback-prompt";
+import { OnboardingPrompts } from "@/components/onboarding-prompts";
 
 const DEFAULT_FILTERS: Filters = {
   situations: [],
@@ -249,6 +250,11 @@ export function Dashboard() {
     if (applications.length > 0) {
       steps.push(
         {
+          tour: "tabs",
+          title: "選考とイベント",
+          body: "上のタブで「選考」と「イベント（説明会）」を切り替え。左右にスワイプしてもOK。",
+        },
+        {
           tour: "card",
           title: "応募先カード",
           body: "企業ごとにカードで一覧（締切が近い順）。左の日付＝次の締切で、1週間以内は赤で強調。下のバーが進捗（色＝通過／半分＝進行中／灰＝結果待ち）。",
@@ -307,7 +313,7 @@ export function Dashboard() {
     }
     steps.push({
       title: "これで準備OK",
-      body: "このガイドはメニュー（⋯）からいつでも見返せる。就活がんばろう！",
+      body: "通知・テーマ・このガイドは、右上の設定（⚙）からいつでも開けるよ。就活がんばろう！",
     });
     return steps;
   }, [applications.length]);
@@ -433,7 +439,7 @@ export function Dashboard() {
             </Button>
           </div>
         </div>
-        <div className="mx-auto flex max-w-3xl">
+        <div className="mx-auto flex max-w-3xl" data-tour="tabs">
           <TabBtn
             active={view === "selection"}
             onClick={() => setView("selection")}
@@ -447,7 +453,13 @@ export function Dashboard() {
       </header>
 
       <main className="flex-1 overflow-y-auto overscroll-contain">
-        <div className="mx-auto max-w-3xl overflow-hidden pb-16 pt-4">
+        <div className="mx-auto max-w-3xl pb-16 pt-4">
+          <div className="px-4">
+            <OnboardingPrompts
+              onOpenSettings={() => setSettingsOpen(true)}
+            />
+          </div>
+          <div className="overflow-hidden">
         <div
           className="flex w-[200%] items-start overflow-hidden"
           style={{
@@ -568,6 +580,7 @@ export function Dashboard() {
             />
           </div>
         </div>
+          </div>
         </div>
       </main>
 
