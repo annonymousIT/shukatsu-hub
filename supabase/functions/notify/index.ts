@@ -175,9 +175,10 @@ function buildPayload(
 
   if (!selPick.length && !evPick.length) return null;
 
-  // 1件1行: 「選　考｜…」「イベント｜…」(選考を全角空白で詰めて｜を揃える)
+  // 1件1行: 「選　　考｜…」「イベント｜…」
+  // 「選考」を全角空白2つで4文字幅に詰めて、「イベント」(4文字)と｜を縦に揃える
   const lines: string[] = [];
-  for (const it of selPick) lines.push(fmtItem("選　考", it));
+  for (const it of selPick) lines.push(fmtItem("選　　考", it));
   for (const it of evPick) lines.push(fmtItem("イベント", it));
 
   // iOS が上にアプリ名「就活 Hub」を出すので、タイトルに名前は入れない(重複回避)
