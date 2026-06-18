@@ -141,10 +141,13 @@ function nearestDay(items: Item[], today: string): Item[] {
   return future.filter((i) => i.day === min);
 }
 
-function fmtItem(it: Item): string {
-  const md = it.day.slice(5).replace("-", "/");
+// 「選　考｜6/21 サントリー・Webテスト」形式(カテゴリ｜日付 企業・ラベル)
+function fmtItem(cat: string, it: Item): string {
+  const mo = Number(it.day.slice(5, 7));
+  const da = Number(it.day.slice(8, 10));
   const t = timeOf(it.date);
-  return `${it.company} ${it.label}・${md}${t ? " " + t : ""}`;
+  const when = `${mo}/${da}${t ? " " + t : ""}`;
+  return `${cat}｜${when} ${it.company}・${it.label}`;
 }
 
 function buildPayload(
@@ -172,12 +175,13 @@ function buildPayload(
 
   if (!selPick.length && !evPick.length) return null;
 
+  // 1件1行: 「選　考｜…」「イベント｜…」(選考を全角空白で詰めて｜を揃える)
   const lines: string[] = [];
-  if (selPick.length) lines.push("【選考】" + selPick.map(fmtItem).join(" / "));
-  if (evPick.length) lines.push("【イベント】" + evPick.map(fmtItem).join(" / "));
+  for (const it of selPick) lines.push(fmtItem("選　考", it));
+  for (const it of evPick) lines.push(fmtItem("イベント", it));
 
   // iOS が上にアプリ名「就活 Hub」を出すので、タイトルに名前は入れない(重複回避)
-  const title = notify.mode === "lead" ? "まもなくの予定" : "今日の予定";
+  const title = notify.mode === "lead" ? "まもなくの予定" : "直近の予定";
   return { title, body: lines.join("\n"), url: "/" };
 }
 
