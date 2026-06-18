@@ -1,15 +1,9 @@
 "use client";
 
-import { Clock, Pin } from "lucide-react";
+import { ChevronRight, Clock, Pin } from "lucide-react";
 import type { EventItem } from "@/lib/types";
 import { cn, safeHref } from "@/lib/utils";
-import {
-  dueInstant,
-  dueToDate,
-  relativeLabel,
-  splitDue,
-  urgencyOf,
-} from "@/lib/date";
+import { dueInstant, dueToDate, splitDue, urgencyOf } from "@/lib/date";
 import { focusOf, isEventDone } from "@/lib/next-action";
 
 const WD_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -17,9 +11,11 @@ const WD_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export function EventCard({
   ev,
   onOpen,
+  compact = false,
 }: {
   ev: EventItem;
   onOpen: () => void;
+  compact?: boolean;
 }) {
   const attended = ev.status === "attended";
   const declined = ev.status === "declined";
@@ -43,6 +39,79 @@ export function EventCard({
         ? ev.venuePlace || "対面"
         : ev.venuePlace;
   const pinned = ev.links.filter((l) => l.pin && l.url).slice(0, 2);
+  const statusLabel = attended ? "参加済" : declined ? "辞退" : ended ? "終了" : null;
+
+  // ---- コンパクト表示(既定): 日付 / イベント名 / 企業・会場 + 状態 + ピンリンク ----
+  // 参加済=緑枠 / 辞退・終了=全体うすめ / 締切間近=赤枠
+  if (compact) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onOpen}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onOpen();
+          }
+        }}
+        className={cn(
+          "group block w-full cursor-pointer rounded-xl bg-card p-3 text-left shadow-[0_1px_2px_rgba(20,28,55,0.05),0_6px_16px_rgba(20,28,55,0.05)] transition-all duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:translate-y-0",
+          attended
+            ? "ring-2 ring-[hsl(var(--success)/0.55)]"
+            : urgent
+              ? "ring-1 ring-[hsl(var(--danger)/0.55)]"
+              : "ring-1 ring-border",
+          declined || ended ? "opacity-60" : "",
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <EventDateBlock d={d} kind={focusKind} focus={focus} urgent={urgent} />
+          <div className="min-w-0 flex-1 self-center">
+            <div className="truncate text-[15px] font-semibold leading-tight">
+              {ev.title || "(イベント名未設定)"}
+            </div>
+            <div className="truncate text-[11.5px] text-muted-foreground">
+              {ev.company || "(企業未設定)"}
+              {venue ? ` · ${venue}` : ""}
+            </div>
+            {statusLabel && (
+              <div
+                className={cn(
+                  "text-[12px]",
+                  attended
+                    ? "font-medium text-success"
+                    : "text-muted-foreground",
+                )}
+              >
+                {statusLabel}
+              </div>
+            )}
+          </div>
+          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+        </div>
+        {pinned.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {pinned.map((l) => (
+              <a
+                key={l.id}
+                href={safeHref(l.url)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 rounded-md bg-accent px-2 py-1 text-[11px] font-medium text-accent-foreground transition-opacity hover:opacity-80"
+              >
+                <Pin className="h-3 w-3" />
+                <span className="max-w-[8rem] truncate">
+                  {l.label || "リンク"}
+                </span>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -153,7 +222,7 @@ function EventDateBlock({
       </div>
       <div
         className={cn(
-          "mt-0.5 text-[15px] font-semibold leading-none",
+          "mt-1 text-[16px] font-semibold leading-none",
           urgent ? "text-danger" : "text-foreground",
         )}
       >
@@ -161,29 +230,11 @@ function EventDateBlock({
       </div>
       <div
         className={cn(
-          "mt-0.5 text-[10px] font-medium leading-none",
+          "mt-1 text-[10px] font-medium leading-none",
           urgent ? "text-danger" : "text-muted-foreground",
         )}
       >
-        {WD_EN[d.getDay()]}
-      </div>
-      {time && (
-        <div
-          className={cn(
-            "mt-0.5 text-[10px] font-semibold leading-none",
-            urgent ? "text-danger" : "text-foreground",
-          )}
-        >
-          {time}
-        </div>
-      )}
-      <div
-        className={cn(
-          "mt-1 whitespace-nowrap text-[10px] leading-none",
-          urgent ? "text-danger" : "text-muted-foreground",
-        )}
-      >
-        {relativeLabel(focus)}
+        {time || WD_EN[d.getDay()]}
       </div>
     </div>
   );

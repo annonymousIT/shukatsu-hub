@@ -644,6 +644,8 @@ export function Dashboard() {
               <EventsView
                 onOpenEvent={setSelectedEventId}
                 onAddEvent={handleAddEvent}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
               />
             </div>
           </div>

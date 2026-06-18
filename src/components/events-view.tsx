@@ -7,6 +7,7 @@ import type {
   EventItem,
   EventSortKey,
   SortDir,
+  ViewMode,
 } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { focusOf, isEventDone } from "@/lib/next-action";
@@ -14,7 +15,6 @@ import {
   dueInstant,
   dueToDate,
   isDueThisWeekOrOverdue,
-  relativeLabel,
   urgencyOf,
 } from "@/lib/date";
 import { EventCard } from "@/components/event-card";
@@ -37,45 +37,47 @@ function focusInst(ev: EventItem): number {
 export function EventsView({
   onOpenEvent,
   onAddEvent,
+  viewMode,
+  onViewModeChange,
 }: {
   onOpenEvent: (id: string) => void;
   onAddEvent: () => void;
+  viewMode: ViewMode;
+  onViewModeChange: (m: ViewMode) => void;
 }) {
   const { events } = useStore();
   const [sort, setSort] = useState<EventSortKey>("apply");
   const [dir, setDir] = useState<SortDir>("asc");
   const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
 
-  const stats = useMemo(
-    () => ({
-      thisWeek: events.filter(
-        (ev) =>
-          !isEventDone(ev) &&
-          isDueThisWeekOrOverdue(
-            focusOf(ev.applyBy, ev.heldAt, ev.applyDone).date,
-          ),
-      ).length,
-      todo: events.filter((ev) => ev.status === "todo").length,
-      attended: events.filter((ev) => ev.status === "attended").length,
-      declined: events.filter((ev) => ev.status === "declined").length,
-    }),
-    [events],
-  );
+  // 直近1週間(今日〜+7日、超過分も含む)の未完了イベントを日付順に
+  const weekItems = useMemo(() => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const ymd = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const lim = new Date();
+    lim.setDate(lim.getDate() + 7);
+    const limitKey = ymd(lim);
 
-  // 直近の予定: 今日から最も近い未参加イベント(1週間以内に限らず、必ず最も近いものを出す)
-  const upcoming = useMemo(() => {
-    let best:
-      | { ev: EventItem; date: string; inst: number }
-      | null = null;
-    for (const ev of events) {
-      if (isEventDone(ev)) continue;
-      const f = focusOf(ev.applyBy, ev.heldAt, ev.applyDone);
-      if (!f.date) continue;
-      const inst = dueInstant(f.date);
-      if (inst == null) continue;
-      if (!best || inst < best.inst) best = { ev, date: f.date, inst };
-    }
-    return best;
+    return events
+      .flatMap((ev) => {
+        if (isEventDone(ev)) return [];
+        const f = focusOf(ev.applyBy, ev.heldAt, ev.applyDone);
+        if (!f.date) return [];
+        if (f.date.slice(0, 10) > limitKey) return [];
+        const inst = dueInstant(f.date);
+        if (inst == null) return [];
+        return [
+          {
+            ev,
+            date: f.date,
+            inst,
+            kind: f.kind === "held" ? "開催" : "締切",
+            urgent: ["overdue", "soon", "near"].includes(urgencyOf(f.date)),
+          },
+        ];
+      })
+      .sort((a, b) => a.inst - b.inst);
   }, [events]);
 
   const visible = useMemo(() => {
@@ -128,97 +130,77 @@ export function EventsView({
     );
   }
 
-  const urgent = upcoming
-    ? ["overdue", "soon", "near"].includes(urgencyOf(upcoming.date))
-    : false;
-  const d0 = upcoming ? dueToDate(upcoming.date) : null;
+  const hasUrgent = weekItems.some((x) => x.urgent);
+  const shown = weekItems.slice(0, 6);
+  const rest = weekItems.length - shown.length;
+  const accent =
+    weekItems.length === 0
+      ? "text-muted-foreground"
+      : hasUrgent
+        ? "text-danger"
+        : "text-primary";
 
   return (
     <>
-      <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 px-0.5 text-[13px]">
-        <span className="text-muted-foreground">
-          今週 <b className="text-[18px] font-bold text-danger">{stats.thisWeek}</b>
-        </span>
-        <span className="text-muted-foreground">
-          未参加{" "}
-          <b className="text-[16px] font-bold text-foreground">{stats.todo}</b>
-        </span>
-        <span className="text-muted-foreground">
-          参加済{" "}
-          <b className="text-[16px] font-bold text-success">{stats.attended}</b>
-        </span>
-        {stats.declined > 0 && (
-          <span className="text-muted-foreground">
-            辞退{" "}
-            <b className="text-[15px] font-semibold text-foreground">
-              {stats.declined}
-            </b>
-          </span>
+      {/* 直近1週間の予定(固定枠) */}
+      <div
+        className={cn(
+          "rounded-xl bg-card p-3 shadow-[0_1px_2px_rgba(20,28,55,0.05),0_6px_16px_rgba(20,28,55,0.05)] ring-2",
+          weekItems.length === 0
+            ? "ring-border"
+            : hasUrgent
+              ? "ring-[hsl(var(--danger)/0.6)]"
+              : "ring-[hsl(var(--primary)/0.75)]",
         )}
-      </div>
-
-      {/* 固定枠。今週内(urgent)=「直近の予定」赤枠 / 先=「次の予定」テーマ色枠 / 予定なし=枠のみ */}
-      <div className="mt-3">
-        <div
-          className={cn(
-            "rounded-xl bg-card p-3 shadow-[0_1px_2px_rgba(20,28,55,0.05),0_6px_16px_rgba(20,28,55,0.05)] ring-2",
-            !upcoming
-              ? "ring-border"
-              : urgent
-                ? "ring-[hsl(var(--danger)/0.6)]"
-                : "ring-[hsl(var(--primary)/0.75)]",
-          )}
-        >
-          <div className="flex items-center gap-1.5 text-[12px] font-medium">
-            <Bell
-              className={cn(
-                "h-3.5 w-3.5",
-                !upcoming
-                  ? "text-muted-foreground"
-                  : urgent
-                    ? "text-danger"
-                    : "text-primary",
-              )}
-            />
-            <span
-              className={
-                !upcoming
-                  ? "text-muted-foreground"
-                  : urgent
-                    ? "text-danger"
-                    : "text-primary"
-              }
-            >
-              {upcoming && !urgent ? "次の予定" : "直近の予定"}
+      >
+        <div className="flex items-center gap-1.5 text-[12px] font-medium">
+          <Bell className={cn("h-3.5 w-3.5", accent)} />
+          <span className={accent}>直近1週間の予定</span>
+          {weekItems.length > 0 && (
+            <span className="ml-auto text-[11px] text-muted-foreground">
+              {weekItems.length}件
             </span>
-            {upcoming && d0 && (
-              <span className="ml-auto text-[11px] text-muted-foreground">
-                {d0.getMonth() + 1}/{d0.getDate()} ·{" "}
-                {relativeLabel(upcoming.date)}
-              </span>
-            )}
-          </div>
-          {upcoming && d0 ? (
-            <div className="mt-1.5 flex items-center gap-2 text-[12.5px]">
-              <span
-                className={cn(
-                  "h-1.5 w-1.5 shrink-0 rounded-full",
-                  urgent ? "bg-danger" : "bg-primary",
-                )}
-              />
-              <b className="font-medium">
-                {upcoming.ev.company || "(企業未設定)"}
-              </b>
-              <span className="truncate text-muted-foreground">
-                {upcoming.ev.title || "(イベント名未設定)"}
-              </span>
-            </div>
-          ) : (
-            <p className="mt-1 text-[12.5px] text-muted-foreground">
-              締切・開催のある予定はまだありません
-            </p>
           )}
         </div>
+        {weekItems.length > 0 ? (
+          <div className="mt-1.5 space-y-1">
+            {shown.map((x) => {
+              const d = dueToDate(x.date);
+              return (
+                <div
+                  key={x.ev.id}
+                  className="flex items-center gap-2.5 text-[12.5px]"
+                >
+                  <span
+                    className={cn(
+                      "w-9 shrink-0 font-medium",
+                      x.urgent ? "text-danger" : "text-primary",
+                    )}
+                  >
+                    {d ? `${d.getMonth() + 1}/${d.getDate()}` : "未定"}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">
+                    <span className="font-medium">
+                      {x.ev.company || x.ev.title || "(未設定)"}
+                    </span>
+                    <span className="text-muted-foreground">
+                      ・{x.ev.title || "イベント"}
+                    </span>
+                  </span>
+                </div>
+              );
+            })}
+            {rest > 0 && (
+              <div className="pl-[2.875rem] text-[11px] text-muted-foreground">
+                ほか{rest}件
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="mt-1 text-[12.5px] text-muted-foreground">
+            直近1週間の予定はありません
+          </p>
+        )}
       </div>
 
       <div className="mt-3">
@@ -229,6 +211,8 @@ export function EventsView({
           onDirChange={setDir}
           filters={filters}
           onFiltersChange={setFilters}
+          viewMode={viewMode}
+          onViewModeChange={onViewModeChange}
         />
       </div>
 
@@ -250,7 +234,11 @@ export function EventsView({
         <div className="mt-3 space-y-2.5">
           {visible.map((ev) => (
             <div key={ev.id}>
-              <EventCard ev={ev} onOpen={() => onOpenEvent(ev.id)} />
+              <EventCard
+                ev={ev}
+                onOpen={() => onOpenEvent(ev.id)}
+                compact={viewMode === "compact"}
+              />
             </div>
           ))}
         </div>
