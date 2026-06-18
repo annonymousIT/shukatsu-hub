@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import {
-  Building2,
   ClipboardList,
   FileText,
   Flame,
@@ -136,15 +135,20 @@ export function ProgressView() {
             <Leaf className="h-3.5 w-3.5 text-success" />
             {progressPhrase(total)}
           </div>
+          {/* 母数(歩には数えない範囲)を小さく。内訳カードと役割を分ける */}
+          {(applications.length > 0 || events.length > 0) && (
+            <div className="pt-1 text-center text-[11px] text-muted-foreground/70">
+              {applications.length}社・イベント{events.length}件と向き合ってる
+            </div>
+          )}
         </div>
 
-        {/* 指標(積み上げ) */}
+        {/* 歩数の内訳(足すと歩数になる) */}
         <div className="grid grid-cols-2 gap-2.5 p-4">
           <Metric icon={FileText} value={effort.docs} label="ES提出" />
           <Metric icon={Users} value={attended} label="説明会・イベント" />
           <Metric icon={ClipboardList} value={effort.webtest} label="Webテスト" />
           <Metric icon={MessagesSquare} value={effort.interview} label="面接・GD" />
-          <Metric icon={Building2} value={applications.length} label="関わった企業" />
         </div>
 
         {/* 称号 */}
