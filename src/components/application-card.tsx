@@ -2,6 +2,7 @@
 
 import {
   Award,
+  ChevronRight,
   Clock,
   ListPlus,
   MinusCircle,
@@ -71,10 +72,12 @@ export function ApplicationCard({
   app,
   onOpen,
   showRole = false,
+  compact = false,
 }: {
   app: Application;
   onOpen: () => void;
   showRole?: boolean;
+  compact?: boolean;
 }) {
   const next = getStageNextAction(app);
   const sit = situationOf(app);
@@ -89,6 +92,71 @@ export function ApplicationCard({
 
   const sitLabel =
     sit === "passed" ? PASSED_LABEL[app.selectionType] : SITUATION_LABEL[sit];
+
+  // ---- コンパクト表示(既定): 締切ブロック / 企業 / 次にやること + ピンリンク ----
+  // 内定・参加確定=緑枠 / 不合格・辞退=全体うすめ / 緊急=赤枠
+  if (compact) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onOpen}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onOpen();
+          }
+        }}
+        className={cn(
+          "group block w-full cursor-pointer rounded-xl bg-card p-3 text-left shadow-[0_1px_2px_rgba(20,28,55,0.05),0_6px_16px_rgba(20,28,55,0.05)] transition-all duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:translate-y-0",
+          sit === "passed"
+            ? "ring-2 ring-[hsl(var(--success)/0.55)]"
+            : urgent
+              ? "ring-1 ring-[hsl(var(--danger)/0.55)]"
+              : "ring-1 ring-border",
+          sit === "rejected" || sit === "declined" ? "opacity-60" : "",
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <DateBlock app={app} next={next} urgent={urgent} />
+          <div className="min-w-0 flex-1 self-center">
+            <div className="flex items-center gap-1 text-[15px] font-semibold leading-tight">
+              <span className="truncate">{app.company || "(名称未設定)"}</span>
+              {app.priority === "high" && (
+                <Star className="h-3.5 w-3.5 shrink-0 fill-primary text-primary" />
+              )}
+            </div>
+            {showRole && app.role && (
+              <div className="truncate text-[11px] text-muted-foreground">
+                {app.role}
+              </div>
+            )}
+            <NextLine app={app} next={next} />
+          </div>
+          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+        </div>
+        {pinned.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2 pl-[3.75rem]">
+            {pinned.map((l) => (
+              <a
+                key={l.id}
+                href={safeHref(l.url)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 rounded-md bg-accent px-2 py-1 text-[11px] font-medium text-accent-foreground transition-opacity hover:opacity-80"
+              >
+                <Pin className="h-3 w-3" />
+                <span className="max-w-[8rem] truncate">
+                  {l.label || "リンク"}
+                </span>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div

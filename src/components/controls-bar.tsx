@@ -5,6 +5,9 @@ import {
   ArrowDown,
   ArrowDownUp,
   ArrowUp,
+  Check,
+  LayoutList,
+  Rows3,
   RotateCcw,
   SlidersHorizontal,
 } from "lucide-react";
@@ -21,13 +24,26 @@ import {
   SheetContent,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import {
   PRIORITY_OPTIONS,
   SITUATION_LABEL,
   SITUATION_OPTIONS,
 } from "@/lib/constants";
-import type { Filters, Priority, Situation, SortDir, SortKey } from "@/lib/types";
+import type {
+  Filters,
+  Priority,
+  Situation,
+  SortDir,
+  SortKey,
+  ViewMode,
+} from "@/lib/types";
 
 const SORT_LABEL: Record<SortKey, string> = {
   deadline: "締切順",
@@ -67,6 +83,8 @@ export function ControlsBar({
   onDirChange,
   filters,
   onFiltersChange,
+  viewMode,
+  onViewModeChange,
 }: {
   sort: SortKey;
   onSortChange: (s: SortKey) => void;
@@ -74,6 +92,8 @@ export function ControlsBar({
   onDirChange: (d: SortDir) => void;
   filters: Filters;
   onFiltersChange: (f: Filters) => void;
+  viewMode: ViewMode;
+  onViewModeChange: (m: ViewMode) => void;
 }) {
   const [open, setOpen] = useState(false);
   const activeCount =
@@ -149,6 +169,37 @@ export function ControlsBar({
           </span>
         )}
       </Button>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 shrink-0 bg-card"
+            aria-label="表示モード"
+            title="表示モード（コンパクト / 詳細）"
+          >
+            {viewMode === "compact" ? (
+              <LayoutList className="h-4 w-4" />
+            ) : (
+              <Rows3 className="h-4 w-4" />
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => onViewModeChange("compact")}>
+            <LayoutList className="h-4 w-4" />
+            <span className="flex-1">コンパクト</span>
+            {viewMode === "compact" && <Check className="h-4 w-4 text-primary" />}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onViewModeChange("detail")}>
+            <Rows3 className="h-4 w-4" />
+            <span className="flex-1">詳細</span>
+            {viewMode === "detail" && <Check className="h-4 w-4 text-primary" />}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent

@@ -212,6 +212,8 @@ export const FONT_OPTIONS: {
 export const LS_KEY = "shukatsu-dashboard:v1";
 export const LS_THEME_KEY = "shukatsu-dashboard:theme";
 export const LS_FONT_KEY = "shukatsu-dashboard:font";
+/** 一覧の表示モード(compact / detail)。端末ごとに記憶 */
+export const LS_VIEWMODE_KEY = "shukatsu-dashboard:viewmode";
 export const LS_ONBOARDED_KEY = "shukatsu-dashboard:onboarded";
 /** サンプル投入済みフラグ(初回チュートリアル用) */
 export const LS_SEEDED_KEY = "shukatsu-dashboard:seeded";

@@ -205,6 +205,9 @@ export interface BackupFile {
 
 export type SortKey = "deadline" | "priority" | "name";
 
+/** 一覧タイルの表示モード: compact=最小+リンク / detail=既存パネル */
+export type ViewMode = "compact" | "detail";
+
 /** 並べ替えの昇順／降順 */
 export type SortDir = "asc" | "desc";
 

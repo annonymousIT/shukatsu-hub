@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowRight,
@@ -15,7 +15,14 @@ import {
   SearchX,
   Upload,
 } from "lucide-react";
-import type { Application, Filters, Priority, SortDir, SortKey } from "@/lib/types";
+import type {
+  Application,
+  Filters,
+  Priority,
+  SortDir,
+  SortKey,
+  ViewMode,
+} from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import {
@@ -24,14 +31,14 @@ import {
   hasThisWeekStageTask,
   passedToday,
   situationOf,
-  thisWeekStageTaskCount,
 } from "@/lib/next-action";
-import { dueInstant, dueToDate, relativeLabel, urgencyOf } from "@/lib/date";
+import { dueInstant, dueToDate, urgencyOf } from "@/lib/date";
 import { exportApplications, parseBackup, readFile } from "@/lib/io";
 import {
   LS_FEEDBACK_KEY,
   LS_LEGAL_KEY,
   LS_ONBOARDED_KEY,
+  LS_VIEWMODE_KEY,
   PASSED_LABEL,
   SAMPLE_APP_ID,
   STEP_KIND_LABEL,
@@ -94,6 +101,7 @@ export function Dashboard() {
   const [sort, setSort] = useState<SortKey>("deadline");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [viewMode, setViewModeState] = useState<ViewMode>("compact");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addEventOpen, setAddEventOpen] = useState(false);
@@ -121,6 +129,24 @@ export function Dashboard() {
   const handleReTap = (v: NavView) => {
     paneRefs.current[VIEWS.indexOf(v)]?.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // 表示モード(compact/detail)を端末に記憶
+  const setViewMode = useCallback((m: ViewMode) => {
+    setViewModeState(m);
+    try {
+      localStorage.setItem(LS_VIEWMODE_KEY, m);
+    } catch {
+      // ignore
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(LS_VIEWMODE_KEY);
+      if (v === "compact" || v === "detail") setViewModeState(v);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // 横スワイプ中は縦スクロールを完全ロック(非passiveで touchmove を preventDefault)
   useEffect(() => {
@@ -268,17 +294,7 @@ export function Dashboard() {
     }
   };
 
-  const stats = useMemo(
-    () => ({
-      total: applications.length,
-      inProgress: applications.filter((a) => a.result === "in_progress").length,
-      passed: applications.filter((a) => a.result === "passed").length,
-      thisWeek: applications.reduce((n, a) => n + thisWeekStageTaskCount(a), 0),
-    }),
-    [applications],
-  );
-
-  // 努力サマリー(積み上げ): 書類/Webテスト/面接GD の「やった」数
+  // 努力サマリー(積み上げ): 書類/Webテスト/面接GD の「やった」数(伴走コメントの活動量に使用)
   const effort = useMemo(() => effortSummary(applications), [applications]);
   // 伴走コメントの段階を決める活動量 = やったタスク総数 ＋ 参加済イベント数
   const companionScore = useMemo(
@@ -561,34 +577,6 @@ export function Dashboard() {
 
                   <CompanionComment score={companionScore} />
 
-                  {/* 努力サマリー(積み上げ): 今週やること＋やった数(書類/Webテスト/面接GD) */}
-                  <div className="mt-2.5 flex flex-wrap items-baseline gap-x-5 gap-y-1 px-0.5 text-[13px]">
-                    <span className="text-muted-foreground">
-                      今週やること{" "}
-                      <b className="text-[18px] font-bold text-danger">
-                        {stats.thisWeek}
-                      </b>
-                    </span>
-                    <span className="text-muted-foreground">
-                      書類{" "}
-                      <b className="text-[16px] font-bold text-foreground">
-                        {effort.docs}
-                      </b>
-                    </span>
-                    <span className="text-muted-foreground">
-                      Webテスト{" "}
-                      <b className="text-[16px] font-bold text-foreground">
-                        {effort.webtest}
-                      </b>
-                    </span>
-                    <span className="text-muted-foreground">
-                      面接・GD{" "}
-                      <b className="text-[16px] font-bold text-foreground">
-                        {effort.interview}
-                      </b>
-                    </span>
-                  </div>
-
                   <div className="mt-3">
                     <AnnouncementBanner applications={applications} />
                   </div>
@@ -601,6 +589,8 @@ export function Dashboard() {
                       onDirChange={setSortDir}
                       filters={filters}
                       onFiltersChange={setFilters}
+                      viewMode={viewMode}
+                      onViewModeChange={setViewMode}
                     />
                   </div>
 
@@ -629,6 +619,7 @@ export function Dashboard() {
                             app={app}
                             showRole={dupCompanies.has(app.company.trim())}
                             onOpen={() => setSelectedId(app.id)}
+                            compact={viewMode === "compact"}
                           />
                         </div>
                       ))}
@@ -857,95 +848,107 @@ function CelebrationBanner({ apps }: { apps: Application[] }) {
   );
 }
 
+// 直近1週間(今日〜+7日、超過分も含む)の各社の次の予定を、日付順に固定表示。
 function AnnouncementBanner({ applications }: { applications: Application[] }) {
   const items = useMemo(() => {
-    const up = applications
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const ymd = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const limit = new Date();
+    limit.setDate(limit.getDate() + 7);
+    const limitKey = ymd(limit);
+
+    return applications
       .flatMap((app) => {
         const na = getStageNextAction(app);
         if (na.type !== "step" || !na.focusDate) return [];
+        const day = na.focusDate.slice(0, 10);
+        if (day > limitKey) return []; // 1週間より先は出さない(超過分は含む)
         const inst = dueInstant(na.focusDate);
         if (inst == null) return [];
         return [
           {
             app,
-            step: na.tasks[0],
-            inst,
+            kind: na.tasks[0]?.kind,
             dueAt: na.focusDate,
-            kind: na.focusKind,
+            inst,
+            urgent: ["overdue", "soon", "near"].includes(
+              urgencyOf(na.focusDate),
+            ),
           },
         ];
       })
       .sort((a, b) => a.inst - b.inst);
-    if (up.length === 0) return null;
-    const first = up[0];
-    const d0 = dueToDate(first.dueAt);
-    const sameDay = up.filter((x) => {
-      const d = dueToDate(x.dueAt);
-      return (
-        d &&
-        d0 &&
-        d.getFullYear() === d0.getFullYear() &&
-        d.getMonth() === d0.getMonth() &&
-        d.getDate() === d0.getDate()
-      );
-    });
-    return { first, sameDay: sameDay.slice(0, 4), date: d0 };
   }, [applications]);
 
-  // 固定枠。今週内(urgent)=「直近の予定」赤枠 / それより先=「次の予定」テーマ色枠 / 予定なし=枠のみ
-  const first = items?.first ?? null;
-  const urgent =
-    !!first && ["overdue", "soon", "near"].includes(urgencyOf(first.dueAt));
-  const accent = !first
-    ? "text-muted-foreground"
-    : urgent
-      ? "text-danger"
-      : "text-primary";
+  const hasUrgent = items.some((x) => x.urgent);
+  const shown = items.slice(0, 6);
+  const rest = items.length - shown.length;
+  const accent =
+    items.length === 0
+      ? "text-muted-foreground"
+      : hasUrgent
+        ? "text-danger"
+        : "text-primary";
 
   return (
     <div
       data-tour="banner"
       className={cn(
         "rounded-xl bg-card p-3 shadow-[0_1px_2px_rgba(20,28,55,0.05),0_6px_16px_rgba(20,28,55,0.05)] ring-2",
-        !first
+        items.length === 0
           ? "ring-border"
-          : urgent
+          : hasUrgent
             ? "ring-[hsl(var(--danger)/0.6)]"
             : "ring-[hsl(var(--primary)/0.75)]",
       )}
     >
       <div className="flex items-center gap-1.5 text-[12px] font-medium">
         <Bell className={cn("h-3.5 w-3.5", accent)} />
-        <span className={accent}>
-          {first && !urgent ? "次の予定" : "直近の予定"}
-        </span>
-        {first && items?.date && (
+        <span className={accent}>直近1週間の予定</span>
+        {items.length > 0 && (
           <span className="ml-auto text-[11px] text-muted-foreground">
-            {items.date.getMonth() + 1}/{items.date.getDate()} ·{" "}
-            {relativeLabel(first.dueAt)}
+            {items.length}件
           </span>
         )}
       </div>
-      {first ? (
+      {items.length > 0 ? (
         <div className="mt-1.5 space-y-1">
-          {(items?.sameDay ?? []).map((x) => (
-            <div key={x.app.id} className="flex items-center gap-2 text-[12.5px]">
-              <span
-                className={cn(
-                  "h-1.5 w-1.5 shrink-0 rounded-full",
-                  urgent ? "bg-danger" : "bg-primary",
-                )}
-              />
-              <span className="font-medium">{x.app.company || "(未設定)"}</span>
-              <span className="truncate text-muted-foreground">
-                {STEP_KIND_LABEL[x.step.kind]}
-              </span>
+          {shown.map((x) => {
+            const d = dueToDate(x.dueAt);
+            return (
+              <div
+                key={x.app.id}
+                className="flex items-center gap-2.5 text-[12.5px]"
+              >
+                <span
+                  className={cn(
+                    "w-9 shrink-0 font-medium",
+                    x.urgent ? "text-danger" : "text-primary",
+                  )}
+                >
+                  {d ? `${d.getMonth() + 1}/${d.getDate()}` : "未定"}
+                </span>
+                <span className="min-w-0 flex-1 truncate">
+                  <span className="font-medium">
+                    {x.app.company || "(未設定)"}
+                  </span>
+                  <span className="text-muted-foreground">
+                    ・{x.kind ? STEP_KIND_LABEL[x.kind] : "予定"}
+                  </span>
+                </span>
+              </div>
+            );
+          })}
+          {rest > 0 && (
+            <div className="pl-[2.875rem] text-[11px] text-muted-foreground">
+              ほか{rest}件
             </div>
-          ))}
+          )}
         </div>
       ) : (
         <p className="mt-1 text-[12.5px] text-muted-foreground">
-          締切・実施日のある予定はまだありません
+          直近1週間の予定はありません
         </p>
       )}
     </div>
