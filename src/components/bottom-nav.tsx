@@ -4,6 +4,7 @@ import {
   Bell,
   BellRing,
   Check,
+  Clipboard,
   ClipboardCheck,
   ClipboardList,
   Flower2,
@@ -96,9 +97,10 @@ export function BottomNav({
                   key="on"
                   className="relative flex h-[22px] w-[22px] items-center justify-center text-primary [transform:scale(1.1)]"
                 >
-                  <ClipboardList className="h-[22px] w-[22px]" strokeWidth={2.4} />
+                  {/* 空のボード(線なし)＋チェックがポンと入る */}
+                  <Clipboard className="h-[22px] w-[22px]" strokeWidth={2.4} />
                   <Check
-                    className="animate-tab-checkin absolute left-1/2 top-[57%] h-[11px] w-[11px]"
+                    className="animate-tab-checkin absolute left-1/2 top-[60%] h-3 w-3"
                     style={{ transform: "translate(-50%, -50%)" }}
                     strokeWidth={3.2}
                   />
