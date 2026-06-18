@@ -94,6 +94,7 @@ function sanitizeTask(raw: any): SelectionTask {
         : null,
     location: str(raw?.location),
     memo: str(raw?.memo),
+    submitted: raw?.submitted === true,
     done: raw?.done === true,
   };
 }
@@ -111,11 +112,9 @@ function sanitizeStage(raw: any): SelectionStage {
 
 /** 旧ステップ1つ → 新段階1つ(1タスク・直列)に変換 */
 function migrateStepToStage(step: SelectionStep): SelectionStage {
-  // やった = 完了/結果待ち/提出済みのいずれか
-  const done =
-    step.status === "done" ||
-    step.status === "waiting" ||
-    step.dueDone === true;
+  // 完了 = 完了/結果待ち。提出済 = 締切消化(dueDone) または完了
+  const done = step.status === "done" || step.status === "waiting";
+  const submitted = step.dueDone === true || done;
   // done(完了=次へ進んだ)→通過 / waiting→結果待ち / それ以外→未
   const result: StageResult =
     step.status === "done"
@@ -135,6 +134,7 @@ function migrateStepToStage(step: SelectionStep): SelectionStage {
         heldAt: step.heldAt,
         location: step.location,
         memo: step.memo,
+        submitted,
         done,
       },
     ],

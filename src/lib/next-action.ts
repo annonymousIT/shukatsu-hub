@@ -221,15 +221,34 @@ export function hasThisWeekTask(app: Application): boolean {
 // 段階 ＞ タスク (新モデル)
 // ============================================================
 
-/** タスクの注目日(締切優先・やった/超過で実施日へ) */
+/** タスクの注目日(締切優先・提出済/超過で実施日へ) */
 export function taskFocusDate(t: SelectionTask): string | null {
-  return focusOf(t.dueAt, t.heldAt, t.done).date;
+  return focusOf(t.dueAt, t.heldAt, t.submitted ?? t.done).date;
 }
 
 /** タスクの注目日が締切か実施日か */
 export function taskFocusKind(t: SelectionTask): FocusKind | null {
-  return focusOf(t.dueAt, t.heldAt, t.done).kind;
+  return focusOf(t.dueAt, t.heldAt, t.submitted ?? t.done).kind;
 }
+
+/** 現在の段階の表示名(段階名 or 先頭タスクの種別)。結果待ち表示などに使う。 */
+export function currentStageLabel(app: Application): string {
+  const s = currentStage(app);
+  if (!s) return "";
+  return s.label.trim() || (s.tasks[0] ? KIND_LABEL_SHORT[s.tasks[0].kind] : "");
+}
+
+const KIND_LABEL_SHORT: Record<SelectionTask["kind"], string> = {
+  entry: "エントリー",
+  es: "ES",
+  web_test: "Webテスト",
+  video: "録画",
+  gd: "GD",
+  interview: "面接",
+  final_interview: "最終面接",
+  internship: "インターン",
+  other: "選考",
+};
 
 /** 段階が決着済み(通過/不合格/辞退)か */
 export function isStageSettled(s: SelectionStage): boolean {

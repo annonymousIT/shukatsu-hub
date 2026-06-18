@@ -49,7 +49,7 @@ import {
   SELECTION_TYPE_OPTIONS,
   STEP_KIND_LABEL,
 } from "@/lib/constants";
-import { getStageNextAction } from "@/lib/next-action";
+import { currentStageLabel, getStageNextAction } from "@/lib/next-action";
 import { formatDue, formatStamp, relativeLabel, urgencyOf } from "@/lib/date";
 import { cn, safeHref } from "@/lib/utils";
 
@@ -892,7 +892,11 @@ function NextBanner({
           {next.type === "waiting" ? (
             <>
               <Clock className="h-5 w-5" />
-              <span className="font-medium">結果待ち</span>
+              <span className="font-medium">
+                {currentStageLabel(app)
+                  ? `${currentStageLabel(app)} の結果待ち`
+                  : "結果待ち"}
+              </span>
             </>
           ) : (
             <>

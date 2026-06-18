@@ -20,6 +20,7 @@ import {
   STEP_KIND_SHORT,
 } from "@/lib/constants";
 import {
+  currentStageLabel,
   getStageNextAction,
   situationOf,
   stageSegments,
@@ -362,9 +363,10 @@ function NextLine({ app, next }: { app: Application; next: StageNextAction }) {
     );
   }
   if (next.type === "waiting") {
+    const label = currentStageLabel(app);
     return (
       <div className="mt-1 truncate text-[12.5px] text-muted-foreground">
-        結果待ち
+        {label ? `${label} の結果待ち` : "結果待ち"}
       </div>
     );
   }

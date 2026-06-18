@@ -88,7 +88,9 @@ export interface SelectionTask {
   location: string;
   /** タスク個別メモ */
   memo: string;
-  /** やった(提出/参加した)か */
+  /** 提出済(締切を消化した)か。締切＋実施日が両方ある時の中間段階。注目が実施日へ移る */
+  submitted?: boolean;
+  /** 完了(実施まで終わった)か */
   done: boolean;
 }
 

@@ -209,8 +209,22 @@ function makeTask(kind: StepKind = "es"): SelectionTask {
     heldAt: null,
     location: "",
     memo: "",
+    submitted: false,
     done: false,
   };
+}
+
+// 〇タップで状態を一段進める。
+// 締切+実施日が両方ある: 未 → 提出済(締切消化) → 完了 → 未(リセット)
+// 片方だけ: 未 ⇄ 完了
+function advanceTaskState(t: SelectionTask): SelectionTask {
+  const hasBoth = !!t.dueAt && !!t.heldAt;
+  if (hasBoth) {
+    if (!t.submitted && !t.done) return { ...t, submitted: true };
+    if (t.submitted && !t.done) return { ...t, done: true };
+    return { ...t, submitted: false, done: false };
+  }
+  return { ...t, submitted: false, done: !t.done };
 }
 
 function makeStage(kind: StepKind = "es"): SelectionStage {
@@ -993,7 +1007,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             ? {
                 ...s,
                 tasks: s.tasks.map((t) =>
-                  t.id === taskId ? { ...t, done: !t.done } : t,
+                  t.id === taskId ? advanceTaskState(t) : t,
                 ),
               }
             : s,

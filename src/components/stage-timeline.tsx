@@ -13,6 +13,7 @@ import {
   LayoutTemplate,
   ListPlus,
   MinusCircle,
+  Pencil,
   Plus,
   RotateCcw,
   Trash2,
@@ -71,27 +72,36 @@ const TEMPLATES: { label: string; kinds: StepKind[] }[] = [
   { label: "早期選考", kinds: ["entry", "es", "interview", "final_interview"] },
 ];
 
-/** 〇トグル: 未(灰の輪) ⇄ やった(黄のチェック) */
+/** 〇トグル: 未 → 提出済(締切＋実施日が両方ある時) → 完了 */
 function DoneDot({
+  submitted,
   done,
   onClick,
   dataTour,
 }: {
+  submitted: boolean;
   done: boolean;
   onClick: (e: React.MouseEvent) => void;
   dataTour?: string;
 }) {
+  const title = done
+    ? "完了（タップで未に戻す）"
+    : submitted
+      ? "提出済（タップで完了）"
+      : "未（タップで提出/完了）";
   return (
     <button
       type="button"
       data-tour={dataTour}
       onClick={onClick}
-      title={done ? "やった（タップで未に戻す）" : "未（タップでやった）"}
+      title={title}
       className={cn(
         "flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-110",
         done
           ? "bg-amber-400 text-white"
-          : "border-2 border-input bg-card",
+          : submitted
+            ? "border-2 border-amber-400 bg-amber-400/30"
+            : "border-2 border-input bg-card",
       )}
     >
       {done && <Check className="h-3.5 w-3.5 animate-evo-stamp" />}
@@ -114,6 +124,7 @@ export function StageTimeline({ app }: { app: Application }) {
   } = useStore();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const curId = currentStage(app)?.id ?? null;
 
   // 全段階が完全に手付かずならテンプレは置換、着手後は追加
@@ -135,7 +146,36 @@ export function StageTimeline({ app }: { app: Application }) {
 
   return (
     <div>
-      <div className="mb-2 flex justify-end">
+      <div className="mb-2 flex items-center justify-between">
+        {app.stages.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => {
+              setEditMode((v) => !v);
+              setEditingId(null);
+            }}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium",
+              editMode
+                ? "bg-primary text-primary-foreground"
+                : "border text-primary hover:bg-accent",
+            )}
+          >
+            {editMode ? (
+              <>
+                <Check className="h-3.5 w-3.5" />
+                完了
+              </>
+            ) : (
+              <>
+                <Pencil className="h-3.5 w-3.5" />
+                編集
+              </>
+            )}
+          </button>
+        ) : (
+          <span />
+        )}
         <button
           type="button"
           onClick={() => setHelpOpen(true)}
@@ -163,6 +203,7 @@ export function StageTimeline({ app }: { app: Application }) {
                 stage={stage}
                 index={i}
                 isCurrent={stage.id === curId}
+                editMode={editMode}
                 editingId={editingId}
                 setEditingId={setEditingId}
                 onAddTask={() => {
@@ -193,6 +234,7 @@ export function StageTimeline({ app }: { app: Application }) {
         </div>
       )}
 
+      {(editMode || app.stages.length === 0) && (
       <div className="mt-3 flex gap-2">
         <Button
           type="button"
@@ -200,7 +242,10 @@ export function StageTimeline({ app }: { app: Application }) {
           className="flex-1 border-dashed bg-card"
           onClick={() => {
             const id = addStage(app.id);
-            if (id) setEditingId(id);
+            if (id) {
+              setEditMode(true);
+              setEditingId(id);
+            }
           }}
         >
           <Plus className="h-4 w-4" />
@@ -235,6 +280,7 @@ export function StageTimeline({ app }: { app: Application }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      )}
     </div>
   );
 }
@@ -276,6 +322,7 @@ function StageBlock({
   isCurrent,
   isFirst,
   isLast,
+  editMode,
   editingId,
   setEditingId,
   onAddTask,
@@ -292,6 +339,7 @@ function StageBlock({
   isCurrent: boolean;
   isFirst: boolean;
   isLast: boolean;
+  editMode: boolean;
   editingId: string | null;
   setEditingId: (id: string | null) => void;
   onAddTask: () => void;
@@ -307,7 +355,6 @@ function StageBlock({
     stage.result === "passed" ||
     stage.result === "failed" ||
     stage.result === "declined";
-  const allDone = stage.tasks.length > 0 && stage.tasks.every((t) => t.done);
   const meta = stage.result !== "pending" ? RESULT_META[stage.result] : null;
 
   return (
@@ -351,40 +398,42 @@ function StageBlock({
             {meta.label}
           </span>
         )}
-        <div className={cn("flex items-center", meta ? "" : "ml-auto")}>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground"
-            disabled={isFirst}
-            onClick={() => onMove(-1)}
-            title="上へ"
-          >
-            <ChevronUp className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground"
-            disabled={isLast}
-            onClick={() => onMove(1)}
-            title="下へ"
-          >
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-danger"
-            onClick={onDelete}
-            title="段階を削除"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+        {editMode && (
+          <div className={cn("flex items-center", meta ? "" : "ml-auto")}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground"
+              disabled={isFirst}
+              onClick={() => onMove(-1)}
+              title="上へ"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground"
+              disabled={isLast}
+              onClick={() => onMove(1)}
+              title="下へ"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-danger"
+              onClick={onDelete}
+              title="段階を削除"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* タスク群 */}
@@ -394,6 +443,7 @@ function StageBlock({
             key={task.id}
             app={app}
             task={task}
+            editMode={editMode}
             dotTour={index === 0 && ti === 0 ? "status-dot" : undefined}
             editing={editingId === task.id}
             canDelete={stage.tasks.length > 1}
@@ -406,15 +456,17 @@ function StageBlock({
         ))}
       </div>
 
-      {/* 並行で追加 */}
-      <button
-        type="button"
-        onClick={onAddTask}
-        className="mt-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-primary hover:bg-accent"
-      >
-        <Plus className="h-3.5 w-3.5" />
-        並行で追加（同時に進む選考）
-      </button>
+      {/* 並行で追加(編集モードのみ) */}
+      {editMode && (
+        <button
+          type="button"
+          onClick={onAddTask}
+          className="mt-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-primary hover:bg-accent"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          並行で追加（同時に進む選考）
+        </button>
+      )}
 
       {/* 結果コントロール */}
       <div className="mt-2 border-t pt-2">
@@ -429,9 +481,6 @@ function StageBlock({
           </button>
         ) : (
           <div className="flex items-center gap-1.5">
-            <span className="mr-0.5 text-[11px] text-muted-foreground">
-              {allDone ? "結果は？" : "やったら→"}
-            </span>
             <ResultBtn
               label="通過"
               tone="success"
@@ -486,6 +535,7 @@ function ResultBtn({
 function TaskRow({
   app,
   task,
+  editMode,
   editing,
   canDelete,
   dotTour,
@@ -497,6 +547,7 @@ function TaskRow({
 }: {
   app: Application;
   task: SelectionTask;
+  editMode: boolean;
   editing: boolean;
   canDelete: boolean;
   dotTour?: string;
@@ -506,6 +557,7 @@ function TaskRow({
   onUpdate: (patch: Partial<Omit<SelectionTask, "id">>) => void;
   onDelete: () => void;
 }) {
+  const [showDetail, setShowDetail] = useState(false);
   const Icon = STEP_KIND_ICON[task.kind];
   const { date, time } = splitDue(task.dueAt);
   const { date: hDate, time: hTime } = splitDue(task.heldAt);
@@ -514,7 +566,7 @@ function TaskRow({
   const u = !task.done && focusAt ? urgencyOf(focusAt) : "none";
   const urgent = u === "overdue" || u === "soon" || u === "near";
 
-  if (editing) {
+  if (editing && editMode) {
     return (
       <div className="space-y-2 rounded-lg border-2 border-[hsl(var(--primary)/0.35)] bg-card p-2.5">
         <div className="flex items-center gap-2">
@@ -637,18 +689,32 @@ function TaskRow({
             </div>
           </div>
         </div>
-        <Input
-          value={task.location}
-          onChange={(e) => onUpdate({ location: e.target.value })}
-          placeholder="場所(任意) 例: オンライン / 東京・大手町"
-          className="h-9"
-        />
-        <Textarea
-          value={task.memo}
-          onChange={(e) => onUpdate({ memo: e.target.value })}
-          placeholder="メモ(任意) 例: 玉手箱形式 / GDは6人30分"
-          className="min-h-[44px] resize-y text-sm"
-        />
+        {/* 場所・メモは「詳細」に折りたたみ(普段は隠して情報量を減らす) */}
+        {!(showDetail || task.location.trim() || task.memo.trim()) ? (
+          <button
+            type="button"
+            onClick={() => setShowDetail(true)}
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <ChevronDown className="h-3.5 w-3.5" />
+            詳細（場所・メモ）
+          </button>
+        ) : (
+          <>
+            <Input
+              value={task.location}
+              onChange={(e) => onUpdate({ location: e.target.value })}
+              placeholder="場所(任意) 例: オンライン / 東京・大手町"
+              className="h-9"
+            />
+            <Textarea
+              value={task.memo}
+              onChange={(e) => onUpdate({ memo: e.target.value })}
+              placeholder="メモ(任意) 例: 玉手箱形式 / GDは6人30分"
+              className="min-h-[44px] resize-y text-sm"
+            />
+          </>
+        )}
         <div className="flex items-center gap-1 pt-0.5">
           {canDelete && (
             <Button
@@ -682,6 +748,7 @@ function TaskRow({
       <div className="p-2">
         <div className="flex items-center gap-2.5">
           <DoneDot
+            submitted={!!task.submitted}
             done={task.done}
             dataTour={dotTour}
             onClick={(e) => {
@@ -691,8 +758,11 @@ function TaskRow({
           />
           <button
             type="button"
-            onClick={onOpen}
-            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+            onClick={() => editMode && onOpen()}
+            className={cn(
+              "flex min-w-0 flex-1 items-center gap-2 text-left",
+              !editMode && "cursor-default",
+            )}
           >
             <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div
@@ -711,7 +781,7 @@ function TaskRow({
             </div>
           </button>
           <span className="shrink-0 text-[11px] text-muted-foreground">
-            {task.done ? "やった" : "未"}
+            {task.done ? "完了" : task.submitted ? "提出済" : "未"}
           </span>
         </div>
         {(task.dueAt || task.heldAt || task.location) && (
@@ -753,22 +823,27 @@ function HelpDialog({
         <div className="space-y-4 text-[13px] leading-relaxed">
           {/* 〇の意味 */}
           <div>
-            <div className="mb-1.5 font-semibold">① 〇＝やった / 未</div>
-            <div className="flex items-center gap-4 rounded-lg bg-muted/60 p-2.5">
-              <div className="flex items-center gap-2">
+            <div className="mb-1.5 font-semibold">① 〇＝未 / 提出済 / 完了</div>
+            <div className="flex items-center gap-2.5 rounded-lg bg-muted/60 p-2.5 text-[12px]">
+              <div className="flex items-center gap-1.5">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-input bg-card" />
-                <span className="text-muted-foreground">未（まだ）</span>
+                <span className="text-muted-foreground">未</span>
               </div>
               <span className="text-muted-foreground">→</span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-amber-400 bg-amber-400/30" />
+                <span className="text-muted-foreground">提出済</span>
+              </div>
+              <span className="text-muted-foreground">→</span>
+              <div className="flex items-center gap-1.5">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-white">
                   <Check className="h-3.5 w-3.5" />
                 </span>
-                <span>やった</span>
+                <span>完了</span>
               </div>
             </div>
             <p className="mt-1 text-[12px] text-muted-foreground">
-              ES提出・面接などのタスクは、丸をタップで切り替えるだけ。
+              丸をタップで進む。締切と実施日が両方あるタスクは「提出済→完了」の2段階。片方だけなら一発で完了。
             </p>
           </div>
 
@@ -776,7 +851,7 @@ function HelpDialog({
           <div>
             <div className="mb-1.5 font-semibold">② 段階の結果</div>
             <p className="mb-1.5 text-[12px] text-muted-foreground">
-              その段階のタスクをやったら、結果を選びます。
+              その段階のタスクを完了したら、結果を選びます。
             </p>
             <div className="flex flex-wrap gap-1.5">
               <span className="inline-flex items-center gap-1 rounded-md border border-[hsl(var(--success)/0.4)] px-2 py-0.5 text-[12px] font-medium text-success">
@@ -794,7 +869,7 @@ function HelpDialog({
             </div>
             <p className="mt-1.5 text-[12px] text-muted-foreground">
               一覧バーの色: <span className="font-medium text-success">緑=通過</span> /{" "}
-              <span className="font-medium text-amber-600">黄=やった待ち</span> / 灰=未 /{" "}
+              <span className="font-medium text-amber-600">黄=完了待ち</span> / 灰=未 /{" "}
               <span className="font-medium text-danger">赤=不合格</span>
             </p>
           </div>
