@@ -120,17 +120,19 @@ export function ProgressView() {
       <h1 className="mb-3 px-0.5 text-[15px] font-semibold">積み上げ</h1>
 
       <div className="overflow-hidden rounded-2xl border bg-card shadow-[0_1px_2px_rgba(20,28,55,0.05),0_6px_16px_rgba(20,28,55,0.05)]">
-        {/* 花畑ヒーロー(緑の薄背景＋緑の地面) */}
-        <div className="bg-[hsl(var(--success)/0.1)] px-4 pt-5">
-          <FlowerField total={total} />
-          <div className="-mx-4 h-2.5 bg-[hsl(var(--success)/0.3)]" />
-          <div className="flex items-end justify-center gap-1.5 pt-3">
+        {/* 花畑ヒーロー(緑の囲い・角丸の中に花＋地面、歩数と一言は白地に) */}
+        <div className="px-4 pt-4">
+          <div className="overflow-hidden rounded-xl bg-[hsl(var(--success)/0.1)] px-3 pt-3">
+            <FlowerField total={total} />
+            <div className="h-2.5 rounded-t-md bg-[hsl(var(--success)/0.35)]" />
+          </div>
+          <div className="mt-3 flex items-end justify-center gap-1.5">
             <span className="text-[34px] font-semibold leading-none">{total}</span>
             <span className="pb-0.5 text-[13px] text-muted-foreground">
               歩、動いた
             </span>
           </div>
-          <div className="flex items-center justify-center gap-1.5 pb-4 pt-1.5 text-[12.5px] text-muted-foreground">
+          <div className="flex items-center justify-center gap-1.5 pt-1.5 text-[12.5px] text-muted-foreground">
             <Leaf className="h-3.5 w-3.5 text-success" />
             {progressPhrase(total)}
           </div>
