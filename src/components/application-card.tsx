@@ -26,7 +26,7 @@ import {
   type StageNextAction,
   type StageSegState,
 } from "@/lib/next-action";
-import { dueToDate, relativeLabel, splitDue, urgencyOf } from "@/lib/date";
+import { dueToDate, urgencyOf } from "@/lib/date";
 
 const WD_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -307,7 +307,7 @@ function DateBlock({
   const focus = next.focusDate;
   const kindLabel = next.focusKind === "held" ? "実施" : "締切";
   const d = focus ? dueToDate(focus) : null;
-  const time = focus ? splitDue(focus).time : "";
+  // 詰め込みすぎを避けて3行(締切/日付/曜日)に。時刻・残り日数は詳細で見せる。
   return (
     <div
       className={cn(
@@ -327,7 +327,7 @@ function DateBlock({
           </div>
           <div
             className={cn(
-              "mt-0.5 text-[15px] font-semibold leading-none",
+              "mt-1 text-[16px] font-semibold leading-none",
               urgent ? "text-danger" : "text-foreground",
             )}
           >
@@ -335,29 +335,11 @@ function DateBlock({
           </div>
           <div
             className={cn(
-              "mt-0.5 text-[10px] font-medium leading-none",
+              "mt-1 text-[10px] font-medium leading-none",
               urgent ? "text-danger" : "text-muted-foreground",
             )}
           >
             {WD_EN[d.getDay()]}
-          </div>
-          {time && (
-            <div
-              className={cn(
-                "mt-0.5 text-[10px] font-semibold leading-none",
-                urgent ? "text-danger" : "text-foreground",
-              )}
-            >
-              {time}
-            </div>
-          )}
-          <div
-            className={cn(
-              "mt-0.5 whitespace-nowrap text-[10px] leading-none",
-              urgent ? "text-danger" : "text-muted-foreground",
-            )}
-          >
-            {relativeLabel(focus)}
           </div>
         </>
       ) : (
