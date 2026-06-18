@@ -136,7 +136,7 @@ export function ApplicationCard({
           <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
         </div>
         {pinned.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2 pl-[3.75rem]">
+          <div className="mt-2 flex flex-wrap gap-2">
             {pinned.map((l) => (
               <a
                 key={l.id}

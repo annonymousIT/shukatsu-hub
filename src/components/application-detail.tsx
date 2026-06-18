@@ -925,10 +925,25 @@ function NextBanner({
         次にやること{parallel && "（並行）"}
       </div>
       <div className="mt-0.5 text-base font-bold leading-tight">
-        {next.tasks
-          .map((t) => STEP_KIND_LABEL[t.kind] + (t.name ? ` ${t.name}` : ""))
-          .join(" ・ ")}
+        {next.tasks.map((t) => STEP_KIND_LABEL[t.kind]).join(" ・ ")}
       </div>
+      {/* サブタイトル(補足名)とメモは一段下に薄く */}
+      {next.tasks.map((t) =>
+        t.name.trim() || t.memo.trim() ? (
+          <div key={t.id} className="mt-0.5">
+            {t.name.trim() && (
+              <div className="text-[12.5px] text-muted-foreground">
+                {t.name}
+              </div>
+            )}
+            {t.memo.trim() && (
+              <div className="line-clamp-2 whitespace-pre-wrap text-[11.5px] text-muted-foreground/75">
+                {t.memo}
+              </div>
+            )}
+          </div>
+        ) : null,
+      )}
       <div
         className={cn(
           "mt-1 flex items-center gap-1.5 text-sm font-medium",
