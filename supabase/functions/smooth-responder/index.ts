@@ -191,6 +191,15 @@ Deno.serve(async (req) => {
     }
   }
 
+  // body に {"force":true} があれば時刻ゲートを無視して即送信(手動テスト用)
+  let force = false;
+  try {
+    const body = await req.json();
+    force = body?.force === true || body?.test === true;
+  } catch {
+    // body 無し/JSON でない → 通常実行
+  }
+
   const today = jstToday();
   const hour = jstHour();
   const { data: rows, error } = await supabase
