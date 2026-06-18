@@ -327,6 +327,15 @@
   .animate-tab-spin {
     animation: tab-spin 0.5s cubic-bezier(0.34, 1.4, 0.64, 1);
   }
+  /* 選考: チェックがポンと入る(クリップ上に重ねた✓を再生) */
+  .animate-tab-checkin {
+    animation: tab-checkin 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  /* イベント: ベルが揺れる */
+  .animate-tab-bell {
+    transform-origin: 50% 15%;
+    animation: tab-bell 0.7s ease-in-out;
+  }
   /* 進化アニメ(枠は固定・中のアイコンだけ動く) */
   .animate-evo-stamp {
     animation: evo-stamp 0.4s cubic-bezier(0.3, 1.4, 0.5, 1);
@@ -407,6 +416,40 @@
   }
   100% {
     transform: rotate(360deg) scale(1.1);
+  }
+}
+
+@keyframes tab-checkin {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: translate(-50%, -50%) scale(1.3);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes tab-bell {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(16deg);
+  }
+  40% {
+    transform: rotate(-13deg);
+  }
+  60% {
+    transform: rotate(9deg);
+  }
+  80% {
+    transform: rotate(-5deg);
   }
 }
 

@@ -351,8 +351,8 @@ export function Dashboard() {
       steps.push(
         {
           tour: "tabs",
-          title: "選考・イベント・設定",
-          body: "下のタブで「選考」「イベント（説明会）」「設定」を切り替え。選考⇄イベントは左右スワイプでもOK。",
+          title: "進捗・選考・イベント・設定",
+          body: "下のタブで切り替え。左端の「進捗」は努力の積み上げ（花畑が育つご褒美ページ）。左右スワイプでも移動OK。",
         },
         {
           tour: "card",
@@ -361,8 +361,8 @@ export function Dashboard() {
         },
         {
           tour: "banner",
-          title: "直近の予定",
-          body: "一番近い予定をここに固定表示。毎朝ここを見ればOK。",
+          title: "直近1週間の予定",
+          body: "今日から1週間ぶんの予定をここに固定表示。毎朝ここを見ればOK。",
         },
         {
           tour: "sort",
@@ -388,8 +388,8 @@ export function Dashboard() {
         {
           tour: "step",
           openDetail: true,
-          title: "段階＞タスクの編集",
-          body: "段階は実線ブロック。タスクをタップで編集（締切・実施日・メモ）。「並行で追加」でES＋Webテストなど同時選考も入れられる。",
+          title: "見る／編集モード",
+          body: "ふだんは「見る」だけ（丸で完了、結果を選ぶ）。右上の「編集」を押すと、段階の追加・並べ替え・締切やメモの編集ができる。",
         },
         {
           tour: "type",

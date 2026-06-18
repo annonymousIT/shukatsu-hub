@@ -3,6 +3,7 @@
 import {
   Bell,
   BellRing,
+  Check,
   ClipboardCheck,
   ClipboardList,
   Flower2,
@@ -89,22 +90,44 @@ export function BottomNav({
               onClick={() => (active ? onReTap?.(t.value) : onChange(t.value))}
               className="group relative flex flex-1 flex-col items-center gap-0.5 py-2 transition-transform active:scale-90"
             >
-              <Icon
-                // 選択になった瞬間に再マウントして進化アニメを毎回再生
-                key={active ? "on" : "off"}
-                className={cn(
-                  "h-[22px] w-[22px]",
-                  active
-                    ? cn(
-                        "text-primary [transform:scale(1.1)]",
-                        t.anim === "spin"
-                          ? "animate-tab-spin"
-                          : "animate-tab-evolve",
-                      )
-                    : "scale-100 text-muted-foreground transition-colors duration-200 group-hover:text-foreground",
-                )}
-                strokeWidth={active ? 2.4 : 2}
-              />
+              {active && t.value === "selection" ? (
+                // 選考: リスト→チェック付きに進化しつつ、チェックがポンと入る
+                <span
+                  key="on"
+                  className="relative flex h-[22px] w-[22px] items-center justify-center text-primary [transform:scale(1.1)]"
+                >
+                  <ClipboardList className="h-[22px] w-[22px]" strokeWidth={2.4} />
+                  <Check
+                    className="animate-tab-checkin absolute left-1/2 top-[57%] h-[11px] w-[11px]"
+                    style={{ transform: "translate(-50%, -50%)" }}
+                    strokeWidth={3.2}
+                  />
+                </span>
+              ) : active && t.value === "events" ? (
+                // イベント: 鳴ってる絵(BellRing)に進化しつつ揺れる
+                <BellRing
+                  key="on"
+                  className="animate-tab-bell h-[22px] w-[22px] text-primary"
+                  strokeWidth={2.4}
+                />
+              ) : (
+                <Icon
+                  // 選択になった瞬間に再マウントして進化アニメを毎回再生
+                  key={active ? "on" : "off"}
+                  className={cn(
+                    "h-[22px] w-[22px]",
+                    active
+                      ? cn(
+                          "text-primary [transform:scale(1.1)]",
+                          t.anim === "spin"
+                            ? "animate-tab-spin"
+                            : "animate-tab-evolve",
+                        )
+                      : "scale-100 text-muted-foreground transition-colors duration-200 group-hover:text-foreground",
+                  )}
+                  strokeWidth={active ? 2.4 : 2}
+                />
+              )}
               <span
                 className={cn(
                   "text-[10.5px] font-medium leading-none transition-colors duration-200",
