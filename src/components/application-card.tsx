@@ -7,7 +7,6 @@ import {
   ListPlus,
   MinusCircle,
   Pin,
-  Star,
   XCircle,
 } from "lucide-react";
 import type { Application, SelectionStage } from "@/lib/types";
@@ -121,11 +120,8 @@ export function ApplicationCard({
         <div className="flex items-center gap-3">
           <DateBlock app={app} next={next} urgent={urgent} />
           <div className="min-w-0 flex-1 self-center">
-            <div className="flex items-center gap-1 text-[15px] font-semibold leading-tight">
-              <span className="truncate">{app.company || "(名称未設定)"}</span>
-              {app.priority === "high" && (
-                <Star className="h-3.5 w-3.5 shrink-0 fill-primary text-primary" />
-              )}
+            <div className="truncate text-[15px] font-semibold leading-tight">
+              {app.company || "(名称未設定)"}
             </div>
             {showRole && app.role && (
               <div className="truncate text-[11px] text-muted-foreground">
@@ -198,11 +194,8 @@ export function ApplicationCard({
       <div className="mt-2 flex items-stretch gap-3">
         <DateBlock app={app} next={next} urgent={urgent} />
         <div className="min-w-0 flex-1 self-center">
-          <div className="flex items-center gap-1 text-[15px] font-semibold leading-tight">
-            <span className="truncate">{app.company || "(名称未設定)"}</span>
-            {app.priority === "high" && (
-              <Star className="h-3.5 w-3.5 shrink-0 fill-primary text-primary" />
-            )}
+          <div className="truncate text-[15px] font-semibold leading-tight">
+            {app.company || "(名称未設定)"}
           </div>
           {showRole && app.role && (
             <div className="truncate text-[11px] text-muted-foreground">

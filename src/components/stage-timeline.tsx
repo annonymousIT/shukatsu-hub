@@ -468,7 +468,8 @@ function StageBlock({
         </button>
       )}
 
-      {/* 結果コントロール */}
+      {/* 結果(結果待ち=結果ボタン / 決着後の「取り消す」は編集モードのみ) */}
+      {(!settled || editMode) && (
       <div className="mt-2 border-t pt-2">
         {settled ? (
           <button
@@ -499,6 +500,7 @@ function StageBlock({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
@@ -765,18 +767,21 @@ function TaskRow({
             )}
           >
             <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <div
-              className={cn(
-                "min-w-0 flex-1 truncate text-sm font-medium",
-                task.done && "text-muted-foreground",
-              )}
-            >
-              {STEP_KIND_LABEL[task.kind]}
+            <div className="min-w-0 flex-1">
+              <div
+                className={cn(
+                  "truncate text-sm font-medium",
+                  task.done && "text-muted-foreground",
+                )}
+              >
+                {STEP_KIND_LABEL[task.kind]}
+              </div>
+              {/* 補足名は種別の下に小さく薄く */}
               {task.name.trim() &&
                 task.name.trim() !== STEP_KIND_LABEL[task.kind] && (
-                  <span className="ml-1 font-normal text-muted-foreground">
+                  <div className="truncate text-[11px] text-muted-foreground/80">
                     {task.name}
-                  </span>
+                  </div>
                 )}
             </div>
           </button>
