@@ -143,7 +143,7 @@ function fmtItem(it: Item): string {
   return `${mo}/${da} ${wd}｜${it.company}・${it.label}`;
 }
 
-type Payload = { title: string; body: string; url: string };
+type Payload = { title: string; body: string; url: string; badge?: number };
 
 // 選考・イベントを混ぜて、通知を組み立てる(複数返ることがある=lead で日数ごと)
 function buildPayloads(
@@ -158,6 +158,10 @@ function buildPayloads(
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   if (!all.length) return [];
 
+  // アプリアイコンの赤バッジ用: 直近1週間以内の件数(アプリ内の集計と一致させる)
+  const weekLimit = addDays(today, 7);
+  const badge = all.filter((i) => i.day <= weekLimit).length;
+
   if (notify.mode === "lead") {
     // N日前ちょうどの予定。日数ごとに別通知(同日複数あれば複数行)
     const out: Payload[] = [];
@@ -167,7 +171,7 @@ function buildPayloads(
       const items = all.filter((i) => i.day === target);
       if (!items.length) continue;
       const title = n === 1 ? "就活Hub｜前日通知" : `就活Hub｜${n}日前通知`;
-      out.push({ title, body: items.map(fmtItem).join("\n"), url: "/" });
+      out.push({ title, body: items.map(fmtItem).join("\n"), url: "/", badge });
     }
     return out;
   }
@@ -180,7 +184,7 @@ function buildPayloads(
   }
   const items = all.filter((i) => days.includes(i.day));
   return [
-    { title: "就活Hub｜直近の予定", body: items.map(fmtItem).join("\n"), url: "/" },
+    { title: "就活Hub｜直近の予定", body: items.map(fmtItem).join("\n"), url: "/", badge },
   ];
 }
 

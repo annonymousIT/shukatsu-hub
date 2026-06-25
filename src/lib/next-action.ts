@@ -447,3 +447,35 @@ export function passedToday(apps: Application[]): Application[] {
       localDayKey(new Date(a.updatedAt)) === todayKey,
   );
 }
+
+/**
+ * アプリアイコンの赤バッジに出す件数。
+ * = 直近1週間以内(締切超過分を含む)の、未完了の選考タスク＋イベント。
+ * ホーム上部の「直近1週間の予定」バナー(選考＋イベント)の合計と一致させる。
+ */
+export function badgeCount(apps: Application[], events: EventItem[]): number {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const lim = new Date();
+  lim.setDate(lim.getDate() + 7);
+  const limitKey = `${lim.getFullYear()}-${pad(lim.getMonth() + 1)}-${pad(lim.getDate())}`;
+  let count = 0;
+  for (const app of apps) {
+    const na = getStageNextAction(app);
+    if (
+      na.type === "step" &&
+      na.focusDate &&
+      na.focusDate.slice(0, 10) <= limitKey &&
+      dueInstant(na.focusDate) != null
+    ) {
+      count++;
+    }
+  }
+  for (const ev of events) {
+    if (isEventDone(ev)) continue;
+    const f = focusOf(ev.applyBy, ev.heldAt, ev.applyDone);
+    if (f.date && f.date.slice(0, 10) <= limitKey && dueInstant(f.date) != null) {
+      count++;
+    }
+  }
+  return count;
+}

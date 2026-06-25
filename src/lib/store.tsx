@@ -38,7 +38,7 @@ import { newId } from "./utils";
 import { DATA_TABLE, supabase } from "./supabase";
 import { normalizeApps, normalizeEvents } from "./io";
 import { pushSnapshot, listSnapshots, type Snapshot } from "./snapshots";
-import { deriveResult } from "./next-action";
+import { badgeCount, deriveResult } from "./next-action";
 import { buildSampleApplications } from "./sample";
 import { useAuth } from "./auth";
 
@@ -790,6 +790,26 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, user?.id, flushToCloud]);
+
+  // ---- アプリアイコンの赤バッジ: 直近1週間の件数。対応端末(インストール済みPWA)のみ ----
+  useEffect(() => {
+    if (!loaded) return;
+    const nav = typeof navigator !== "undefined" ? (navigator as any) : null;
+    if (!nav || !("setAppBadge" in nav)) return;
+    const apply = () => {
+      const n = badgeCount(applications, events);
+      if (n > 0) nav.setAppBadge?.(n).catch(() => {});
+      else nav.clearAppBadge?.().catch(() => {});
+    };
+    apply();
+    // 時間経過で締切が近づくため、復帰時に再計算する
+    window.addEventListener("focus", apply);
+    document.addEventListener("visibilitychange", apply);
+    return () => {
+      window.removeEventListener("focus", apply);
+      document.removeEventListener("visibilitychange", apply);
+    };
+  }, [applications, events, loaded]);
 
   const mutateApp = useCallback(
     (id: string, fn: (app: Application) => Application) => {

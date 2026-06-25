@@ -93,7 +93,19 @@ self.addEventListener("push", (event) => {
     tag: data.tag || "shukatsu-notify",
     data: { url: data.url || "/" },
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    (async () => {
+      await self.registration.showNotification(title, options);
+      // 通知に件数(badge)が乗っていればアプリアイコンの赤バッジへ反映(アプリ未起動でも更新)
+      if (typeof data.badge === "number" && self.navigator.setAppBadge) {
+        try {
+          await self.navigator.setAppBadge(data.badge);
+        } catch (e) {
+          /* 非対応端末は無視 */
+        }
+      }
+    })(),
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {
