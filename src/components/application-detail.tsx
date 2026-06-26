@@ -655,19 +655,40 @@ function DetailBody({
               onClick={() => {
                 navigator.clipboard
                   ?.writeText((app.loginId ?? "").trim())
-                  .then(() => toast.success("IDをコピーしました"))
+                  .then(() => {
+                    toast.success("IDをコピーしました");
+                    setCopiedId("loginId");
+                    window.setTimeout(
+                      () => setCopiedId((c) => (c === "loginId" ? null : c)),
+                      1300,
+                    );
+                  })
                   .catch(() => {});
               }}
-              className="inline-flex max-w-full items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-[13px] font-medium text-primary hover:bg-accent/50"
-            >
-              <KeyRound className="h-3.5 w-3.5" />
-              <span className="max-w-[12rem] truncate">
-                {app.loginIdMasked ? "ID ••••••••" : app.loginId}
-              </span>
-              {app.loginIdPinned && (
-                <Pin className="h-3 w-3 text-muted-foreground/70" />
+              className={cn(
+                "inline-flex max-w-full items-center gap-1.5 rounded-lg border px-3 py-2 text-[13px] font-medium hover:bg-accent/50",
+                copiedId === "loginId"
+                  ? "border-[hsl(var(--success)/0.5)] bg-[hsl(var(--success)/0.1)] text-success"
+                  : "bg-card text-primary",
               )}
-              <Copy className="h-3.5 w-3.5 opacity-60" />
+            >
+              {copiedId === "loginId" ? (
+                <>
+                  <Check className="animate-evo-flip h-3.5 w-3.5" />
+                  コピーしました
+                </>
+              ) : (
+                <>
+                  <KeyRound className="h-3.5 w-3.5" />
+                  <span className="max-w-[12rem] truncate">
+                    {app.loginIdMasked ? "ID ••••••••" : app.loginId}
+                  </span>
+                  {app.loginIdPinned && (
+                    <Pin className="h-3 w-3 text-muted-foreground/70" />
+                  )}
+                  <Copy className="h-3.5 w-3.5 opacity-60" />
+                </>
+              )}
             </button>
           )}
         </Section>

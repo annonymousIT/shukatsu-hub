@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import {
   Award,
+  Check,
   ChevronRight,
   Clock,
   Copy,
@@ -357,6 +359,7 @@ function PinnedChips({
   app: Application;
   className?: string;
 }) {
+  const [copied, setCopied] = useState(false);
   const pinned = app.links.filter((l) => l.pin && l.url).slice(0, 2);
   const id = app.loginId?.trim() ?? "";
   const hasId = !!app.loginIdPinned && id.length > 0;
@@ -371,16 +374,34 @@ function PinnedChips({
             e.stopPropagation();
             navigator.clipboard
               ?.writeText(id)
-              .then(() => toast.success("IDをコピーしました"))
+              .then(() => {
+                toast.success("IDをコピーしました");
+                setCopied(true);
+                window.setTimeout(() => setCopied(false), 1300);
+              })
               .catch(() => {});
           }}
-          className="inline-flex items-center gap-1 rounded-md border border-dashed border-[hsl(var(--primary)/0.45)] bg-accent px-2 py-1 text-[11px] font-medium text-accent-foreground transition-opacity hover:opacity-80"
+          className={cn(
+            "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors",
+            copied
+              ? "border-[hsl(var(--success)/0.6)] bg-[hsl(var(--success)/0.12)] text-success"
+              : "border-dashed border-[hsl(var(--primary)/0.45)] bg-accent text-accent-foreground hover:opacity-80",
+          )}
         >
-          <KeyRound className="h-3 w-3" />
-          <span className="max-w-[8rem] truncate">
-            ID {app.loginIdMasked ? "••••••" : id}
-          </span>
-          <Copy className="h-3 w-3 opacity-70" />
+          {copied ? (
+            <>
+              <Check className="animate-evo-flip h-3 w-3" />
+              コピーしました
+            </>
+          ) : (
+            <>
+              <KeyRound className="h-3 w-3" />
+              <span className="max-w-[8rem] truncate">
+                ID {app.loginIdMasked ? "••••••" : id}
+              </span>
+              <Copy className="h-3 w-3 opacity-70" />
+            </>
+          )}
         </button>
       )}
       {pinned.map((l) => (
