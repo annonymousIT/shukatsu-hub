@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, KeyRound, ShieldCheck, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,28 +9,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { LATEST_CHANGELOG } from "@/lib/changelog";
 
 const NEWS_KEY = "shukatsu-dashboard:newsSeen";
-// 内容を更新したらこの版番号を変えると、全ユーザーに再度1回だけ表示される。
-const NEWS_VERSION = "2026-06-20";
-
-const ITEMS = [
-  {
-    icon: KeyRound,
-    title: "企業ごとにログインID・会員番号を保存",
-    body: "ピン留めすれば一覧からワンタップでコピー。「••••」で隠して表示もできます。",
-  },
-  {
-    icon: Bell,
-    title: "アプリアイコンに件数バッジ ＋ 通知の改善",
-    body: "直近の予定数をアイコンに表示。毎朝のまとめ／前日・〇日前のリマインドも選べます。",
-  },
-  {
-    icon: ShieldCheck,
-    title: "プライバシーの説明を明確化",
-    body: "あなたのデータは本人だけがアクセス可能。開発者は閲覧せず、パスワードは保存しません。",
-  },
-];
+// 最新の更新日。これと既読版が違えば全ユーザーに1回だけ表示される。
+const NEWS_VERSION = LATEST_CHANGELOG.date;
 
 /** 既存ユーザーに「更新のお知らせ」を版ごとに1回だけ表示する。 */
 export function WhatsNew({ enabled }: { enabled: boolean }) {
@@ -67,7 +50,7 @@ export function WhatsNew({ enabled }: { enabled: boolean }) {
         </DialogDescription>
 
         <div className="mt-1 space-y-2.5">
-          {ITEMS.map((it) => (
+          {LATEST_CHANGELOG.items.map((it) => (
             <div
               key={it.title}
               className="flex items-start gap-2.5 rounded-lg bg-muted/60 p-3"

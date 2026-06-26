@@ -47,6 +47,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { ChangelogDialog } from "@/components/changelog-dialog";
 
 const NOTIFY_HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 6:00〜23:00
 
@@ -198,6 +199,7 @@ function SettingsBody({
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmRestore, setConfirmRestore] = useState(false);
   const [hasV2Backup, setHasV2Backup] = useState(false);
+  const [changelogOpen, setChangelogOpen] = useState(false);
   const [needsHome, setNeedsHome] = useState(false);
   const [testing, setTesting] = useState(false);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
@@ -725,6 +727,11 @@ function SettingsBody({
               }}
             />
             <Row
+              icon={<History className="h-4 w-4" />}
+              label="更新履歴"
+              onClick={() => setChangelogOpen(true)}
+            />
+            <Row
               icon={<FileText className="h-4 w-4" />}
               label="プライバシー・利用規約"
               onClick={onOpenLegal}
@@ -732,6 +739,8 @@ function SettingsBody({
           </div>
         </Section>
       </div>
+
+      <ChangelogDialog open={changelogOpen} onOpenChange={setChangelogOpen} />
     </>
   );
 }
